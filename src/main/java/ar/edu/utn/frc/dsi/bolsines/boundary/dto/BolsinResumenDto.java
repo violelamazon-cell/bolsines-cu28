@@ -9,5 +9,8 @@ public record BolsinResumenDto(
         String cmOrigen,
         LocalDateTime fechaEnvio
 ) {
+    public BolsinResumenDto(int numeroBolsin, String cmOrigen, int numeroPrecinto) {
+        this(numeroBolsin, numeroPrecinto, null, cmOrigen, null);
+    }
 }
 

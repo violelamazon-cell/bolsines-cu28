@@ -37,6 +37,7 @@ public class DataLoader implements CommandLineRunner {
     private final EstadoRemitoRepository estadoRemitoRepository;
     private final DocumentacionRepository documentacionRepository;
     private final BolsinRepository bolsinRepository;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @org.springframework.beans.factory.annotation.Value("${bolsines.reset-on-start:false}")
     private boolean resetOnStart;
@@ -47,7 +48,8 @@ public class DataLoader implements CommandLineRunner {
                       EstadoBolsinRepository estadoBolsinRepository,
                       EstadoRemitoRepository estadoRemitoRepository,
                       DocumentacionRepository documentacionRepository,
-                      BolsinRepository bolsinRepository) {
+                      BolsinRepository bolsinRepository,
+                      org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         this.comisionMedicaRepository = comisionMedicaRepository;
         this.empleadoRepository = empleadoRepository;
         this.tipoDocumentoRepository = tipoDocumentoRepository;
@@ -55,6 +57,7 @@ public class DataLoader implements CommandLineRunner {
         this.estadoRemitoRepository = estadoRemitoRepository;
         this.documentacionRepository = documentacionRepository;
         this.bolsinRepository = bolsinRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
@@ -72,6 +75,22 @@ public class DataLoader implements CommandLineRunner {
             tipoDocumentoRepository.deleteAll();
             estadoBolsinRepository.deleteAll();
             estadoRemitoRepository.deleteAll();
+
+            try {
+                jdbcTemplate.execute("ALTER TABLE comisiones_medicas ALTER COLUMN id RESTART WITH 1");
+                jdbcTemplate.execute("ALTER TABLE empleados ALTER COLUMN id RESTART WITH 1");
+                jdbcTemplate.execute("ALTER TABLE tipos_documento ALTER COLUMN id RESTART WITH 1");
+                jdbcTemplate.execute("ALTER TABLE estados_bolsin ALTER COLUMN id RESTART WITH 1");
+                jdbcTemplate.execute("ALTER TABLE estados_remito ALTER COLUMN id RESTART WITH 1");
+                jdbcTemplate.execute("ALTER TABLE bolsines ALTER COLUMN id RESTART WITH 1");
+                jdbcTemplate.execute("ALTER TABLE remitos ALTER COLUMN id RESTART WITH 1");
+                jdbcTemplate.execute("ALTER TABLE detalles_remito ALTER COLUMN id RESTART WITH 1");
+                jdbcTemplate.execute("ALTER TABLE documentaciones ALTER COLUMN id RESTART WITH 1");
+                jdbcTemplate.execute("ALTER TABLE cambios_estado_bolsin ALTER COLUMN id RESTART WITH 1");
+                jdbcTemplate.execute("ALTER TABLE cambios_estado_documentacion ALTER COLUMN id RESTART WITH 1");
+            } catch (Exception ex) {
+                log.debug("No se pudieron reiniciar secuencias de identity: {}", ex.getMessage());
+            }
         }
 
         // =====================================================================

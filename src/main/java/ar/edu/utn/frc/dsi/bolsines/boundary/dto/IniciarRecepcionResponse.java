@@ -4,7 +4,11 @@ import java.util.List;
 
 public record IniciarRecepcionResponse(
         String cmUsuario,
+        String codigoCm,
         List<BolsinResumenDto> bolsines
 ) {
+    public IniciarRecepcionResponse(String cmUsuario, List<BolsinResumenDto> bolsines) {
+        this(cmUsuario, null, bolsines);
+    }
 }
 

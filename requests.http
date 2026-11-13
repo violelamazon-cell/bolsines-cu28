@@ -1,0 +1,159 @@
+### ============================================================
+### requests.http – CU 28 "Registrar recepción de bolsín"
+### Usar con VS Code REST Client o IntelliJ HTTP Client
+### App debe estar corriendo en localhost:8080
+### ============================================================
+
+@base = http://localhost:8080
+@empleado_cordoba = 1
+@empleado_villa_maria = 4
+
+###
+# ──────────────────────────────────────────────
+# SESIÓN SIMULADA
+# ──────────────────────────────────────────────
+
+### Ver sesión del empleado activo (Córdoba por defecto)
+GET {{base}}/api/sesion?empleadoId={{empleado_cordoba}}
+Accept: application/json
+
+###
+### Ver todos los empleados disponibles
+GET {{base}}/api/sesion/empleados
+Accept: application/json
+
+###
+### Cambiar el usuario activo (a empleado Villa María)
+POST {{base}}/api/sesion/iniciar
+Content-Type: application/json
+
+{ "empleadoId": {{empleado_villa_maria}} }
+
+###
+# ──────────────────────────────────────────────
+# FLUJO PRINCIPAL COMPLETO (Bolsín 1001, Empleado Córdoba)
+# ──────────────────────────────────────────────
+
+### PASO 1-4: Iniciar recepción – busca bolsines Enviados para CM Córdoba
+# Espera: 200 con lista de 3 bolsines (1001, 1002, 1003)
+POST {{base}}/api/recepcion-bolsin/iniciar
+X-Empleado-Id: {{empleado_cordoba}}
+Accept: application/json
+
+###
+### PASO 4 (filtros): Listar bolsines enviados (sin filtros)
+GET {{base}}/api/recepcion-bolsin/bolsines
+X-Empleado-Id: {{empleado_cordoba}}
+Accept: application/json
+
+###
+### PASO 5-7: Seleccionar el bolsín 1001
+# Espera: 200 con remitos, documentaciones y opciones (solo opción 1 habilitada)
+POST {{base}}/api/recepcion-bolsin/seleccionar-bolsin
+X-Empleado-Id: {{empleado_cordoba}}
+Content-Type: application/json
+
+{ "numeroBolsin": 1001 }
+
+###
+### PASO 8-9: Elegir opción 1 ("El contenido es igual al registrado")
+# Espera: 200 con resumen y requiereConfirmacion: true
+POST {{base}}/api/recepcion-bolsin/seleccionar-recepcion
+X-Empleado-Id: {{empleado_cordoba}}
+Content-Type: application/json
+
+{ "numeroBolsin": 1001, "opcion": 1 }
+
+###
+### PASO 10-12: CONFIRMAR la recepción
+# Espera: 200 con confirmado:true, nuevo estado del bolsín, remitos y docs actualizadas, notificaciones
+POST {{base}}/api/recepcion-bolsin/confirmar
+X-Empleado-Id: {{empleado_cordoba}}
+Content-Type: application/json
+
+{ "numeroBolsin": 1001, "opcion": 1, "confirmado": true }
+
+###
+# ──────────────────────────────────────────────
+# FLUJO A6: NO CONFIRMAR (no modifica la BD)
+# ──────────────────────────────────────────────
+
+### A6: Iniciar y luego NO confirmar (confirmado=false)
+# Espera: 200 con confirmado:false y mensaje de no modificación
+POST {{base}}/api/recepcion-bolsin/confirmar
+X-Empleado-Id: {{empleado_cordoba}}
+Content-Type: application/json
+
+{ "numeroBolsin": 1002, "opcion": 1, "confirmado": false }
+
+###
+# ──────────────────────────────────────────────
+# DOBLE CONFIRMACIÓN → 409 CONFLICT
+# ──────────────────────────────────────────────
+
+### DOBLE CONFIRMACIÓN: intentar confirmar el bolsín 1001 de nuevo (ya fue recibido arriba)
+# Espera: 409 Conflict con {"mensaje": "El bolsín N° 1001 ya fue recibido..."}
+POST {{base}}/api/recepcion-bolsin/confirmar
+X-Empleado-Id: {{empleado_cordoba}}
+Content-Type: application/json
+
+{ "numeroBolsin": 1001, "opcion": 1, "confirmado": true }
+
+###
+# ──────────────────────────────────────────────
+# FLUJO A1: PRECINTO INEXISTENTE → 404
+# ──────────────────────────────────────────────
+
+### A1: Buscar por número de precinto que no existe
+# Espera: 404 con {"mensaje": "No se encontró un bolsín con el número de precinto ingresado: 99999"}
+GET {{base}}/api/recepcion-bolsin/bolsines?numeroPrecinto=99999
+X-Empleado-Id: {{empleado_cordoba}}
+Accept: application/json
+
+###
+# ──────────────────────────────────────────────
+# FLUJO A2: CM ORIGEN INEXISTENTE → 404
+# ──────────────────────────────────────────────
+
+### A2: Buscar por CM de origen que no existe
+# Espera: 404 con {"mensaje": "No se encontró un bolsín con la comisión médica de origen ingresada: ..."}
+GET {{base}}/api/recepcion-bolsin/bolsines?cmOrigen=CM+Patagonia
+X-Empleado-Id: {{empleado_cordoba}}
+Accept: application/json
+
+###
+# ──────────────────────────────────────────────
+# ESTADO VACÍO: empleado de Villa María (sin bolsines enviados)
+# ──────────────────────────────────────────────
+
+### Estado vacío: iniciar con empleado de CM Villa María
+# Espera: 404 con {"mensaje": "No hay bolsines enviados pendientes..."}
+POST {{base}}/api/recepcion-bolsin/iniciar
+X-Empleado-Id: {{empleado_villa_maria}}
+Accept: application/json
+
+###
+# ──────────────────────────────────────────────
+# OPCIÓN 2 → 501 NOT IMPLEMENTED
+# ──────────────────────────────────────────────
+
+### Opción 2 (no disponible) → 501
+# Espera: 501 con {"mensaje": "La opción 2 (recepción parcial) aún no está disponible. Próximamente."}
+POST {{base}}/api/recepcion-bolsin/seleccionar-recepcion
+X-Empleado-Id: {{empleado_cordoba}}
+Content-Type: application/json
+
+{ "numeroBolsin": 1002, "opcion": 2 }
+
+###
+# ──────────────────────────────────────────────
+# CANCELAR (no modifica la BD)
+# ──────────────────────────────────────────────
+
+### Cancelar: terminar el proceso sin registrar nada
+# Espera: 204 No Content
+POST {{base}}/api/recepcion-bolsin/cancelar
+X-Empleado-Id: {{empleado_cordoba}}
+
+###
+

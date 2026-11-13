@@ -5,7 +5,8 @@ public record SesionDto(
         String nombreCompleto,
         String email,
         String codigoCm,
-        String nombreCm
-) {
+        String nombreCm) {
+    public SesionDto(Long empleadoId, String nombreCompleto, String nombreCm, String codigoCm) {
+        this(empleadoId, nombreCompleto, null, codigoCm, nombreCm);
+    }
 }
-

@@ -30,6 +30,7 @@ Proyecto Práctico de Aplicación Integrador (PPAI)
      ```powershell
      .\mvnw spring-boot:run -Dspring-boot.run.arguments=--bolsines.reset-on-start=true
      ```
+     La propiedad `bolsines.reset-on-start` (valor por defecto `false`) indica al `DataLoader` si debe purgar todas las tablas y volver a sembrar los datos semilla iniciales.
 3. Abrir el navegador en:
    * **Aplicación:** [http://localhost:8080](http://localhost:8080)
    * **Consola H2:** [http://localhost:8080/h2-console](http://localhost:8080/h2-console)

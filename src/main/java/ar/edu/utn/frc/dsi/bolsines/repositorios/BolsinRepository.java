@@ -30,5 +30,13 @@ public interface BolsinRepository extends JpaRepository<Bolsin, Long> {
            "LEFT JOIN FETCH ce.estado " +
            "WHERE b.destino = :destino")
     List<Bolsin> findByDestinoWithCambios(@Param("destino") ComisionMedica destino);
+
+    @Query("SELECT DISTINCT b FROM Bolsin b " +
+           "LEFT JOIN FETCH b.origen " +
+           "LEFT JOIN FETCH b.destino " +
+           "LEFT JOIN FETCH b.cambioEstado ce " +
+           "LEFT JOIN FETCH ce.estado " +
+           "WHERE b.numeroBolsin = :numeroBolsin")
+    Optional<Bolsin> findByNumeroBolsinWithCambios(@Param("numeroBolsin") int numeroBolsin);
 }
 
