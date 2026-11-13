@@ -14,6 +14,8 @@
     empleados: [],
     listaBolsinesOriginal: [],
     selectedBolsin: null,
+    bolsinDetalle: null,       // respuesta de /seleccionar-bolsin
+    opcionElegida: null,       // número de opción seleccionada en Paso 2
     ultimoReintento: null
   };
 
@@ -55,7 +57,20 @@
     paso1: document.getElementById('paso-1'),
     paso2: document.getElementById('paso-2'),
     paso3: document.getElementById('paso-3'),
-    paso4: document.getElementById('paso-4')
+    paso4: document.getElementById('paso-4'),
+
+    // Paso 2 – Revisión
+    p2Resumen: document.getElementById('p2-resumen'),
+    p2Cargando: document.getElementById('p2-cargando'),
+    p2Error: document.getElementById('p2-error'),
+    p2ErrorMensaje: document.getElementById('p2-error-mensaje'),
+    p2Remitos: document.getElementById('p2-remitos'),
+    p2RemitosLista: document.getElementById('p2-remitos-lista'),
+    p2Opciones: document.getElementById('p2-opciones'),
+    p2OpcionesLista: document.getElementById('p2-opciones-lista'),
+    btnVolverP2: document.getElementById('btn-volver-p2'),
+    btnCancelarP2: document.getElementById('btn-cancelar-p2'),
+    btnContinuarP2: document.getElementById('btn-continuar-p2')
   };
 
   // --- Helper de Fetch con cabecera obligatoria X-Empleado-Id ---
@@ -263,6 +278,10 @@
     });
     trElement.classList.add('selected');
     trElement.setAttribute('aria-selected', 'true');
+
+    // Avanzar al Paso 2: seleccionar el bolsín en el backend
+    const numBolsin = bolsin.numeroBolsin ?? bolsin.numero ?? bolsin.id;
+    seleccionarBolsin(numBolsin);
   }
 
   // --- Carga inicial y filtros ---
@@ -501,6 +520,169 @@
     reiniciarWizard();
   }
 
+  // =========================================================================
+  // PASO 2 – Revisión
+  // =========================================================================
+
+  async function seleccionarBolsin(numeroBolsin) {
+    // Ir al paso 2 y mostrar estado cargando
+    goToStep(2);
+    state.opcionElegida = null;
+    state.bolsinDetalle = null;
+
+    el.p2Resumen.innerHTML = '';
+    el.p2Resumen.hidden = true;
+    el.p2Remitos.hidden = true;
+    el.p2Opciones.hidden = true;
+    el.p2Error.hidden = true;
+    el.p2Cargando.hidden = false;
+    el.btnContinuarP2.disabled = true;
+
+    try {
+      const res = await apiFetch('/api/recepcion-bolsin/seleccionar-bolsin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numeroBolsin: Number(numeroBolsin) })
+      });
+
+      el.p2Cargando.hidden = true;
+
+      if (!res.ok) {
+        let msg = 'Ocurrió un problema. Intentá de nuevo en unos segundos.';
+        try {
+          const errData = await res.json();
+          if (errData && errData.mensaje) msg = errData.mensaje;
+        } catch (_) {}
+        mostrarErrorP2(msg);
+        return;
+      }
+
+      const data = await res.json();
+      state.bolsinDetalle = data;
+      renderPaso2(data);
+
+    } catch (err) {
+      el.p2Cargando.hidden = true;
+      mostrarErrorP2('Ocurrió un problema. Intentá de nuevo en unos segundos.');
+    }
+  }
+
+  function mostrarErrorP2(mensaje) {
+    el.p2ErrorMensaje.textContent = mensaje;
+    el.p2Error.hidden = false;
+    el.p2Resumen.hidden = true;
+    el.p2Remitos.hidden = true;
+    el.p2Opciones.hidden = true;
+  }
+
+  function renderPaso2(data) {
+    // --- Tarjeta resumen ---
+    const remitos = data.remitos || [];
+    const totalDocs = remitos.reduce((acc, r) => acc + (r.documentaciones || []).length, 0);
+
+    el.p2Resumen.innerHTML = `
+      <div class="resumen-campo">
+        <span class="resumen-label">Bolsín N°</span>
+        <span class="resumen-valor">${escapeHtml(String(data.numeroBolsin))}</span>
+      </div>
+      <div class="resumen-campo">
+        <span class="resumen-label">Precinto</span>
+        <span class="resumen-valor">${escapeHtml(String(data.numeroPrecinto ?? '-'))}</span>
+      </div>
+      <div class="resumen-campo">
+        <span class="resumen-label">Origen</span>
+        <span class="resumen-valor">${escapeHtml(data.cmOrigen ?? '-')}</span>
+      </div>
+      <div class="resumen-campo">
+        <span class="resumen-label">Contenido</span>
+        <span class="resumen-valor">${remitos.length} remito${remitos.length !== 1 ? 's' : ''} · ${totalDocs} documentacion${totalDocs !== 1 ? 'es' : ''}</span>
+      </div>
+    `;
+    el.p2Resumen.hidden = false;
+
+    // --- Remitos con <details> ---
+    el.p2RemitosLista.innerHTML = '';
+    remitos.forEach((remito, idx) => {
+      const docs = remito.documentaciones || [];
+      const details = document.createElement('details');
+      details.className = 'remito-details';
+      if (idx === 0) details.setAttribute('open', '');
+
+      details.innerHTML = `
+        <summary>Remito N° ${escapeHtml(String(remito.numeroRemito))} · ${docs.length} documentacion${docs.length !== 1 ? 'es' : ''}</summary>
+        <div class="remito-tabla-wrapper">
+          <table aria-label="Documentaciones del Remito N° ${escapeHtml(String(remito.numeroRemito))}">
+            <thead>
+              <tr>
+                <th scope="col">Tipo de documento</th>
+                <th scope="col">N°</th>
+                <th scope="col">Asunto</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${docs.map(doc => `
+                <tr>
+                  <td>${escapeHtml(doc.tipoDocumento ?? '-')}</td>
+                  <td class="tabular-nums">${escapeHtml(String(doc.numero ?? '-'))}</td>
+                  <td>${escapeHtml(doc.asunto ?? '-')}</td>
+                </tr>
+              `).join('')}
+              ${docs.length === 0 ? '<tr><td colspan="3">Sin documentaciones</td></tr>' : ''}
+            </tbody>
+          </table>
+        </div>
+      `;
+      el.p2RemitosLista.appendChild(details);
+    });
+    el.p2Remitos.hidden = false;
+
+    // --- Opciones de recepción ---
+    const opciones = data.opcionesRecepcion || [];
+    el.p2OpcionesLista.innerHTML = '';
+    state.opcionElegida = null;
+    el.btnContinuarP2.disabled = true;
+
+    opciones.forEach(opcion => {
+      const wrapper = document.createElement('div');
+      wrapper.className = `opcion-card${!opcion.habilitada ? ' disabled' : ''}`;
+
+      const inputId = `opcion-${opcion.codigo}`;
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'opcion-recepcion';
+      input.id = inputId;
+      input.value = String(opcion.codigo);
+      input.disabled = !opcion.habilitada;
+
+      input.addEventListener('change', () => {
+        if (input.checked) {
+          state.opcionElegida = opcion.codigo;
+          el.btnContinuarP2.disabled = false;
+        }
+      });
+
+      const label = document.createElement('label');
+      label.htmlFor = inputId;
+      label.innerHTML = `
+        <span class="opcion-codigo" aria-hidden="true">${escapeHtml(String(opcion.codigo))}</span>
+        <span class="opcion-descripcion">${escapeHtml(opcion.descripcion)}</span>
+        ${!opcion.habilitada ? '<span class="opcion-proximamente">Próximamente</span>' : ''}
+      `;
+
+      wrapper.appendChild(input);
+      wrapper.appendChild(label);
+      el.p2OpcionesLista.appendChild(wrapper);
+    });
+
+    el.p2Opciones.hidden = opciones.length === 0;
+  }
+
+  async function continuarDesdeP2() {
+    if (!state.bolsinDetalle || state.opcionElegida === null) return;
+    // La confirmación la maneja el Paso 3 (siguiente parte).
+    goToStep(3);
+  }
+
   // --- Registro de Event Listeners ---
   function inicializarEventos() {
     if (el.selectUsuario) {
@@ -529,6 +711,21 @@
 
     if (el.btnCancelarPaso1) {
       el.btnCancelarPaso1.addEventListener('click', cancelarProceso);
+    }
+
+    // Paso 2
+    if (el.btnVolverP2) {
+      el.btnVolverP2.addEventListener('click', () => {
+        goToStep(1);
+      });
+    }
+
+    if (el.btnCancelarP2) {
+      el.btnCancelarP2.addEventListener('click', cancelarProceso);
+    }
+
+    if (el.btnContinuarP2) {
+      el.btnContinuarP2.addEventListener('click', continuarDesdeP2);
     }
   }
 

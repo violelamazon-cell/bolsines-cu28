@@ -133,8 +133,52 @@
       </footer>
     </section>
 
-    <!-- Pasos 2 a 4 como contenedores vacíos para la próxima parte -->
-    <section id="paso-2" class="step-panel" hidden></section>
+    <!-- Paso 2: Revisión -->
+    <section id="paso-2" class="step-panel" hidden aria-labelledby="paso-titulo">
+
+      <!-- Tarjeta resumen del bolsín -->
+      <article id="p2-resumen" class="bolsin-resumen-card"></article>
+
+      <!-- Área cargando Paso 2 -->
+      <div id="p2-cargando" class="loading-container" aria-live="polite" aria-busy="true" hidden>
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Cargando revisión…</span>
+      </div>
+
+      <!-- Área de error Paso 2 -->
+      <div id="p2-error" class="banner banner-danger" role="alert" hidden>
+        <div class="banner-message">
+          <span class="banner-icon" aria-hidden="true">✖</span>
+          <span id="p2-error-mensaje">Ocurrió un problema. Intentá de nuevo en unos segundos.</span>
+        </div>
+      </div>
+
+      <!-- Lista de remitos con <details> -->
+      <div id="p2-remitos" hidden>
+        <h2 class="paso-seccion-titulo">Detalle de remitos</h2>
+        <div id="p2-remitos-lista"></div>
+      </div>
+
+      <!-- Bloque: ¿Qué recibiste? -->
+      <div id="p2-opciones" hidden>
+        <h2 class="paso-seccion-titulo">¿Qué recibiste?</h2>
+        <fieldset id="p2-opciones-lista" class="opciones-recepcion" aria-required="true">
+          <legend class="sr-only">Elegí una opción de recepción</legend>
+          <!-- Tarjetas radio generadas por JS -->
+        </fieldset>
+      </div>
+
+      <!-- Botones del Paso 2 -->
+      <footer class="step-footer step-footer-p2">
+        <button type="button" id="btn-volver-p2" class="secondary outline">Volver</button>
+        <div class="step-footer-actions-right">
+          <button type="button" id="btn-cancelar-p2" class="btn-discreto">Cancelar</button>
+          <button type="button" id="btn-continuar-p2" class="btn-primary" disabled>Continuar</button>
+        </div>
+      </footer>
+    </section>
+
+    <!-- Pasos 3 y 4 como contenedores vacíos para la próxima parte -->
     <section id="paso-3" class="step-panel" hidden></section>
     <section id="paso-4" class="step-panel" hidden></section>
   </main>

@@ -556,3 +556,264 @@ tbody tr[aria-selected="true"] {
   }
 }
 
+/* ==========================================================================
+   Paso 2 – Revisión
+   ========================================================================== */
+
+/* Tarjeta resumen del bolsín */
+.bolsin-resumen-card {
+  background-color: var(--app-info-bg);
+  border: 1px solid rgba(11, 92, 173, 0.2);
+  border-left: 4px solid var(--pico-primary);
+  border-radius: var(--pico-border-radius);
+  padding: 1.1rem 1.4rem;
+  margin-bottom: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.6rem 1.5rem;
+}
+
+.bolsin-resumen-card .resumen-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.bolsin-resumen-card .resumen-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--app-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bolsin-resumen-card .resumen-valor {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--app-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Título de sección dentro del paso */
+.paso-seccion-titulo {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--app-text-muted);
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--app-border);
+  padding-bottom: 0.4rem;
+}
+
+/* <details> de remitos */
+.remito-details {
+  border: 1px solid var(--app-border);
+  border-radius: var(--pico-border-radius);
+  margin-bottom: 0.65rem;
+  background-color: var(--app-surface);
+  overflow: hidden;
+}
+
+.remito-details summary {
+  padding: 0.85rem 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  list-style: none;
+  user-select: none;
+  color: var(--app-text);
+}
+
+.remito-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.remito-details summary::before {
+  content: '▶';
+  font-size: 0.7rem;
+  color: var(--app-text-muted);
+  transition: transform 0.18s ease;
+  flex-shrink: 0;
+}
+
+.remito-details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.remito-details summary:focus-visible {
+  outline: 2px solid var(--pico-primary);
+  outline-offset: -2px;
+}
+
+.remito-details .remito-tabla-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-top: 1px solid var(--app-border);
+}
+
+.remito-details table {
+  font-size: 0.9rem;
+}
+
+.remito-details table th {
+  background-color: #F8FAFC;
+  font-size: 0.8rem;
+}
+
+/* Opciones de recepción como tarjetas-radio grandes */
+.opciones-recepcion {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.opcion-card {
+  position: relative;
+}
+
+.opcion-card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.opcion-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1rem 1.15rem;
+  border: 2px solid var(--app-border);
+  border-radius: var(--pico-border-radius);
+  cursor: pointer;
+  background-color: var(--app-surface);
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  min-height: 80px;
+}
+
+.opcion-card label:hover {
+  border-color: var(--pico-primary);
+  background-color: #F0F7FF;
+}
+
+.opcion-card input[type="radio"]:checked + label {
+  border-color: var(--pico-primary);
+  background-color: var(--app-info-bg);
+  box-shadow: 0 0 0 3px var(--pico-primary-focus);
+}
+
+.opcion-card input[type="radio"]:focus-visible + label {
+  outline: 2px solid var(--pico-primary);
+  outline-offset: 2px;
+}
+
+.opcion-card.disabled label {
+  cursor: not-allowed;
+  background-color: #F4F6F9;
+  border-color: var(--app-border);
+  color: var(--app-text-muted);
+  opacity: 0.75;
+}
+
+.opcion-card.disabled label:hover {
+  border-color: var(--app-border);
+  background-color: #F4F6F9;
+}
+
+.opcion-codigo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  background-color: var(--pico-primary);
+  color: #FFFFFF;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-bottom: 0.1rem;
+}
+
+.opcion-card.disabled .opcion-codigo {
+  background-color: #A0AEC0;
+}
+
+.opcion-descripcion {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--app-text);
+  line-height: 1.35;
+}
+
+.opcion-proximamente {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--app-text-muted);
+  background-color: #E2E8F0;
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  display: inline-block;
+  letter-spacing: 0.03em;
+  align-self: flex-start;
+}
+
+/* Footer Paso 2: Volver · [Cancelar · Continuar] */
+.step-footer-p2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.step-footer-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Clase de accesibilidad: oculto visualmente pero disponible para lectores */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 640px) {
+  .bolsin-resumen-card {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .opciones-recepcion {
+    grid-template-columns: 1fr;
+  }
+
+  .step-footer-p2 {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .step-footer-p2 button,
+  .step-footer-actions-right {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .step-footer-actions-right {
+    flex-direction: column-reverse;
+  }
+}
+
