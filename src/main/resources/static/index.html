@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bolsines - Registrar recepción de bolsín</title>
+  <link rel="stylesheet" href="css/pico.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <!-- Header global -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="header-left">
+        <span class="app-brand">Bolsines</span>
+        <span id="cm-badge" class="cm-badge" aria-label="Comisión Médica del usuario activo">CM Córdoba</span>
+      </div>
+      <div class="header-right">
+        <div class="user-selector-wrapper">
+          <label for="select-usuario">Usuario activo</label>
+          <select id="select-usuario" aria-describedby="nota-sesion">
+            <!-- Opciones cargadas dinámicamente -->
+          </select>
+          <small id="nota-sesion" class="text-muted">Simula el inicio de sesión</small>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenedor principal -->
+  <main class="container">
+    <!-- Aviso de cambio de usuario -->
+    <div id="banner-aviso-usuario" class="banner banner-info" role="status" aria-live="polite" hidden>
+      <span class="banner-icon" aria-hidden="true">ℹ</span>
+      <span>Cambiaste de usuario. Se reinició el proceso.</span>
+    </div>
+
+    <!-- Stepper de 4 etapas -->
+    <nav aria-label="Progreso del proceso" class="stepper-nav">
+      <ol class="stepper">
+        <li class="step current" aria-current="step" data-step="1">
+          <span class="step-badge">1</span>
+          <span class="step-label">Bolsín</span>
+        </li>
+        <li class="step pending" data-step="2">
+          <span class="step-badge">2</span>
+          <span class="step-label">Revisión</span>
+        </li>
+        <li class="step pending" data-step="3">
+          <span class="step-badge">3</span>
+          <span class="step-label">Confirmación</span>
+        </li>
+        <li class="step pending" data-step="4">
+          <span class="step-badge">4</span>
+          <span class="step-label">Resultado</span>
+        </li>
+      </ol>
+      <div class="stepper-compact" aria-hidden="true">
+        Paso <span id="compact-step-number">1</span> de 4 · <span id="compact-step-name">Bolsín</span>
+      </div>
+    </nav>
+
+    <!-- Paso 1: Elegir bolsín -->
+    <section id="paso-1" class="step-panel" aria-labelledby="paso-titulo">
+      <header class="step-header">
+        <h1 id="paso-titulo" class="paso-titulo" tabindex="-1">Bolsines pendientes de recepción</h1>
+        <p id="paso-subtitulo" class="paso-subtitulo">Bolsines enviados a <span id="cm-usuario-subtitulo">CM Córdoba</span></p>
+      </header>
+
+      <!-- Formulario de Filtros -->
+      <form id="form-filtros" class="filtros-form" role="search" aria-label="Filtrar bolsines">
+        <div class="filtro-field">
+          <label for="filtro-precinto">N° de precinto</label>
+          <input type="text" id="filtro-precinto" name="numeroPrecinto" placeholder="N° de precinto" autocomplete="off">
+        </div>
+        <div class="filtro-field">
+          <label for="filtro-cm-origen">Comisión médica de origen</label>
+          <input type="text" id="filtro-cm-origen" name="cmOrigen" placeholder="Comisión médica de origen" autocomplete="off">
+        </div>
+        <div class="filtro-actions">
+          <button type="submit" id="btn-buscar" class="btn-primary">Buscar</button>
+          <button type="button" id="btn-limpiar" class="secondary outline">Limpiar</button>
+        </div>
+      </form>
+
+      <!-- Banner de filtro sin resultados (A1 / A2) -->
+      <div id="banner-filtro-error" class="banner banner-warning" role="alert" hidden>
+        <span class="banner-icon" aria-hidden="true">⚠</span>
+        <span id="banner-filtro-mensaje"></span>
+      </div>
+
+      <!-- Banner de error de conexión con Reintentar -->
+      <div id="banner-error-conexion" class="banner banner-danger" role="alert" hidden>
+        <div class="banner-message">
+          <span class="banner-icon" aria-hidden="true">✖</span>
+          <span id="mensaje-error-conexion">Ocurrió un problema. Intentá de nuevo en unos segundos.</span>
+        </div>
+        <button type="button" id="btn-reintentar" class="secondary outline">Reintentar</button>
+      </div>
+
+      <!-- Estado cargando -->
+      <div id="estado-cargando" class="loading-container" aria-live="polite" aria-busy="true" hidden>
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Buscando bolsines…</span>
+      </div>
+
+      <!-- Tabla de bolsines -->
+      <div id="contenedor-tabla" class="table-responsive">
+        <table id="tabla-bolsines" aria-label="Listado de bolsines pendientes de recepción">
+          <thead>
+            <tr>
+              <th scope="col">CM origen</th>
+              <th scope="col">N° de precinto</th>
+              <th scope="col">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-bolsines-body">
+            <!-- Filas inyectadas por JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Estado vacío (404 inicial) -->
+      <article id="estado-vacio" class="card empty-state" hidden>
+        <p class="empty-state-title"><strong>No hay bolsines enviados para tu comisión médica.</strong></p>
+        <p class="empty-state-text">Cuando el correo entregue un bolsín, va a aparecer acá.</p>
+      </article>
+
+      <!-- Acciones globales del paso (Cancelar) -->
+      <footer class="step-footer">
+        <button type="button" id="btn-cancelar-paso-1" class="btn-discreto">Cancelar</button>
+      </footer>
+    </section>
+
+    <!-- Pasos 2 a 4 como contenedores vacíos para la próxima parte -->
+    <section id="paso-2" class="step-panel" hidden></section>
+    <section id="paso-3" class="step-panel" hidden></section>
+    <section id="paso-4" class="step-panel" hidden></section>
+  </main>
+</body>
+</html>
+

@@ -1,0 +1,558 @@
+/* ==========================================================================
+   Tokens de diseño (Sección 3.1 - Especificación UX/UI CU 28)
+   ========================================================================== */
+
+:root {
+  /* Marca */
+  --pico-primary: #0B5CAD;
+  --pico-primary-background: #0B5CAD;
+  --pico-primary-hover: #084A8C;
+  --pico-primary-hover-background: #084A8C;
+  --pico-primary-focus: rgba(11, 92, 173, 0.25);
+  --pico-primary-inverse: #FFFFFF;
+
+  /* Acento (usar con moderación: stepper activo, detalles) */
+  --app-accent: #F2B705;
+
+  /* Semánticos */
+  --app-success: #1E7F4F;
+  --app-success-bg: #E6F4EC;
+  --app-danger: #B3261E;
+  --app-danger-bg: #FCEAE8;
+  --app-warning: #8A5A00;
+  --app-warning-bg: #FFF4DB;
+  --app-info-bg: #E8F1FA;
+
+  /* Superficies y texto */
+  --app-bg: #F4F6F9;
+  --app-surface: #FFFFFF;
+  --app-border: #D5DBE3;
+  --app-text: #1B2430;
+  --app-text-muted: #5A6675;
+
+  /* Forma y espacio */
+  --pico-border-radius: 0.5rem;
+  --app-space: 1.25rem;
+}
+
+/* ==========================================================================
+   Tipografía y Base (Sección 3.2 y 3.3)
+   ========================================================================== */
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--app-bg);
+  color: var(--app-text);
+  margin: 0;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 var(--app-space);
+}
+
+/* ==========================================================================
+   Header global
+   ========================================================================== */
+
+.app-header {
+  background-color: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+  padding: 0.75rem var(--app-space);
+  margin-bottom: var(--app-space);
+}
+
+.header-container {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-brand {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--pico-primary);
+  letter-spacing: -0.02em;
+}
+
+.cm-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  background-color: var(--app-info-bg);
+  color: var(--pico-primary);
+  border: 1px solid rgba(11, 92, 173, 0.2);
+  border-radius: var(--pico-border-radius);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.user-selector-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.user-selector-wrapper label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--app-text-muted);
+  margin: 0;
+  padding: 0;
+}
+
+.user-selector-wrapper select {
+  display: block;
+  width: 100%;
+  min-width: 280px;
+  max-width: 400px;
+  height: auto;
+  min-height: 40px;
+  font-size: 0.875rem;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+  padding-left: 0.75rem;
+  padding-right: 2.75rem !important;
+  margin: 0 !important;
+}
+
+.user-selector-wrapper small {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--app-text-muted);
+  margin: 0.2rem 0 0 0 !important;
+  padding: 0;
+  line-height: 1.2;
+}
+
+/* ==========================================================================
+   Stepper
+   ========================================================================== */
+
+.stepper-nav {
+  margin-bottom: var(--app-space);
+}
+
+.stepper {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.stepper .step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--pico-border-radius);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--app-text-muted);
+}
+
+.stepper .step.pending {
+  color: var(--app-text-muted);
+  border-color: var(--app-border);
+}
+
+.stepper .step[aria-current="step"],
+.stepper .step.current {
+  color: var(--app-text);
+  border-color: var(--app-accent);
+  border-left: 4px solid var(--app-accent);
+  font-weight: 600;
+}
+
+.stepper .step[aria-current="step"] .step-badge,
+.stepper .step.current .step-badge {
+  background-color: var(--app-accent);
+  color: #1B2430;
+  font-weight: 700;
+}
+
+.stepper .step.completed {
+  color: var(--pico-primary);
+  border-color: var(--pico-primary);
+}
+
+.stepper .step.completed .step-badge {
+  background-color: var(--pico-primary);
+  color: #FFFFFF;
+}
+
+.step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background-color: #E2E8F0;
+  color: var(--app-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.stepper-compact {
+  display: none;
+  padding: 0.75rem 1rem;
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-left: 4px solid var(--app-accent);
+  border-radius: var(--pico-border-radius);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--app-text);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .stepper {
+    display: none;
+  }
+  .stepper-compact {
+    display: block;
+  }
+}
+
+/* ==========================================================================
+   Banners y Alertas
+   ========================================================================== */
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.15rem;
+  border-radius: var(--pico-border-radius);
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  border: 1px solid transparent;
+}
+
+.banner-info {
+  background-color: var(--app-info-bg);
+  border-color: rgba(11, 92, 173, 0.2);
+  color: var(--pico-primary);
+}
+
+.banner-warning {
+  background-color: var(--app-warning-bg);
+  border-color: rgba(138, 90, 0, 0.25);
+  color: var(--app-warning);
+}
+
+.banner-danger {
+  background-color: var(--app-danger-bg);
+  border-color: rgba(179, 38, 30, 0.25);
+  color: var(--app-danger);
+  justify-content: space-between;
+}
+
+.banner-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.banner-icon {
+  font-weight: bold;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Paneles de paso
+   ========================================================================== */
+
+.step-panel {
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--pico-border-radius);
+  padding: var(--app-space);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  margin-bottom: var(--app-space);
+}
+
+.step-header {
+  margin-bottom: 1.5rem;
+}
+
+.paso-titulo {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--app-text);
+  margin-bottom: 0.25rem;
+}
+
+.paso-titulo:focus {
+  outline: none;
+}
+
+.paso-subtitulo {
+  font-size: 1.1rem;
+  color: var(--app-text-muted);
+  margin-bottom: 0;
+}
+
+/* ==========================================================================
+   Filtros
+   ========================================================================== */
+
+.filtros-form {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  background-color: #F8FAFC;
+  padding: 1rem;
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--app-border);
+}
+
+.filtro-field {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.filtro-field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--app-text);
+  margin-bottom: 0;
+}
+
+.filtro-field input {
+  margin-bottom: 0;
+  min-height: 44px;
+}
+
+.filtro-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.filtro-actions button {
+  min-height: 44px;
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Tabla accesible
+   ========================================================================== */
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0;
+  background-color: var(--app-surface);
+}
+
+table th {
+  font-weight: 600;
+  color: var(--app-text);
+  background-color: #F1F5F9;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--app-border);
+}
+
+table td {
+  padding: 0.75rem 1rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--app-border);
+  color: var(--app-text);
+}
+
+tbody tr {
+  background-color: #FFFFFF !important;
+  transition: background-color 0.15s ease;
+}
+
+tbody tr[tabindex="0"] {
+  cursor: pointer;
+}
+
+tbody tr[tabindex="0"]:hover {
+  background-color: #F8FAFC !important;
+}
+
+tbody tr[tabindex="0"]:focus-visible {
+  outline: 2px solid var(--pico-primary);
+  outline-offset: -2px;
+}
+
+tbody tr.selected,
+tbody tr[aria-selected="true"] {
+  background-color: var(--app-info-bg) !important;
+}
+
+.btn-seleccionar {
+  min-height: 38px;
+  margin-bottom: 0;
+  padding: 0.4rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--pico-primary) !important;
+  background-color: #FFFFFF !important;
+  border: 1.5px solid var(--pico-primary) !important;
+  border-radius: var(--pico-border-radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-seleccionar:hover,
+.btn-seleccionar:focus-visible {
+  background-color: var(--pico-primary) !important;
+  color: #FFFFFF !important;
+  border-color: var(--pico-primary-hover) !important;
+}
+
+/* ==========================================================================
+   Estados de carga y vacío
+   ========================================================================== */
+
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1.5rem;
+  font-size: 1.1rem;
+  color: var(--app-text-muted);
+}
+
+.spinner {
+  display: inline-block;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 3px solid rgba(11, 92, 173, 0.2);
+  border-top-color: var(--pico-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-top-color: var(--pico-primary);
+    opacity: 0.7;
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background-color: #F8FAFC;
+  border: 1px dashed var(--app-border);
+  border-radius: var(--pico-border-radius);
+  margin-top: 1rem;
+}
+
+.empty-state-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--app-text);
+  margin-bottom: 0.5rem;
+}
+
+.empty-state-text {
+  font-size: 0.95rem;
+  color: var(--app-text-muted);
+  margin-bottom: 0;
+}
+
+/* ==========================================================================
+   Footer y acciones
+   ========================================================================== */
+
+.step-footer {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--app-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-discreto {
+  background: none;
+  border: none;
+  color: var(--app-text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+
+.btn-discreto:hover {
+  color: var(--app-danger);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .filtros-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filtro-actions {
+    flex-direction: column;
+  }
+
+  .filtro-actions button {
+    width: 100%;
+  }
+
+  .step-footer {
+    justify-content: center;
+  }
+}
+
