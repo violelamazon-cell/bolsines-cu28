@@ -198,19 +198,60 @@
       </div>
     </section>
 
-    <!-- Paso 4: Resultado (Placeholder) -->
+    <!-- Paso 4: Resultado -->
     <section id="paso-4" class="step-panel" hidden aria-labelledby="p4-titulo">
-      <header class="step-header">
-        <h1 id="p4-titulo" class="paso-titulo" tabindex="-1">Recepción registrada</h1>
-        <p class="paso-subtitulo">Paso 4 · Resultado</p>
-      </header>
-      <article class="card">
-        <p><strong>✔ Recepción registrada con éxito.</strong></p>
-        <div id="p4-resultado-detalle"></div>
-      </article>
-      <footer class="step-footer">
-        <button type="button" id="btn-reiniciar-desde-p4" class="btn-primary">Registrar otra recepción</button>
-      </footer>
+      <!-- Vista de éxito -->
+      <div id="p4-vista-exito">
+        <header class="step-header resultado-header">
+          <div class="resultado-titulo-wrapper">
+            <span class="resultado-badge-exito" aria-hidden="true">✔</span>
+            <div>
+              <h1 id="p4-titulo" class="paso-titulo" tabindex="-1">Recepción registrada</h1>
+              <p id="p4-subtitulo" class="paso-subtitulo">Se completó el registro de recepción del bolsín.</p>
+            </div>
+          </div>
+        </header>
+
+        <!-- Resumen de la operación -->
+        <article class="resultado-resumen-card">
+          <h2 class="resultado-seccion-titulo">Resumen de la recepción</h2>
+          <ul id="p4-resumen-lista" class="resultado-lista-resumen">
+            <!-- Items inyectados por JS -->
+          </ul>
+        </article>
+
+        <!-- Notificaciones enviadas -->
+        <section class="resultado-notificaciones-seccion" aria-labelledby="p4-notificaciones-titulo">
+          <h2 id="p4-notificaciones-titulo" class="resultado-seccion-titulo">Notificaciones enviadas</h2>
+          <div id="p4-notificaciones-lista" class="notificaciones-lista">
+            <!-- Items inyectados por JS -->
+          </div>
+        </section>
+
+        <footer class="step-footer">
+          <button type="button" id="btn-reiniciar-desde-p4" class="btn-primary">Registrar otra recepción</button>
+        </footer>
+      </div>
+
+      <!-- Vista de error en confirmación (409/500) -->
+      <div id="p4-vista-error" hidden>
+        <header class="step-header resultado-header">
+          <div class="resultado-titulo-wrapper">
+            <span class="resultado-badge-error" aria-hidden="true">✖</span>
+            <div>
+              <h1 id="p4-titulo-error" class="paso-titulo" tabindex="-1">No se pudo registrar la recepción</h1>
+              <p class="paso-subtitulo">No se modificó ningún dato.</p>
+            </div>
+          </div>
+        </header>
+        <div class="banner banner-danger" role="alert">
+          <span class="banner-icon" aria-hidden="true">✖</span>
+          <span id="p4-error-mensaje-texto">No se pudo registrar la recepción. No se modificó ningún dato.</span>
+        </div>
+        <footer class="step-footer">
+          <button type="button" id="btn-volver-inicio-error" class="btn-primary">Volver al inicio</button>
+        </footer>
+      </div>
     </section>
 
     <!-- Diálogo modal de confirmación (Paso 3) -->

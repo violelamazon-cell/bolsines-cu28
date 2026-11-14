@@ -78,6 +78,7 @@
     btnContinuarP2: document.getElementById('btn-continuar-p2'),
 
     // Paso 3 – Confirmación (Diálogo modal)
+    p3Titulo: document.getElementById('p3-titulo'),
     dialogConfirmacion: document.getElementById('dialog-confirmacion'),
     dialogNumeroBolsin: document.getElementById('dialog-numero-bolsin'),
     dialogResumenDocs: document.getElementById('dialog-resumen-docs'),
@@ -88,9 +89,17 @@
     btnNoConfirmar: document.getElementById('btn-no-confirmar'),
     btnConfirmarRecepcion: document.getElementById('btn-confirmar-recepcion'),
 
-    // Paso 4 – Resultado (Placeholder)
-    p4ResultadoDetalle: document.getElementById('p4-resultado-detalle'),
-    btnReiniciarDesdeP4: document.getElementById('btn-reiniciar-desde-p4')
+    // Paso 4 – Resultado
+    p4Titulo: document.getElementById('p4-titulo'),
+    p4Subtitulo: document.getElementById('p4-subtitulo'),
+    p4VistaExito: document.getElementById('p4-vista-exito'),
+    p4VistaError: document.getElementById('p4-vista-error'),
+    p4TituloError: document.getElementById('p4-titulo-error'),
+    p4ErrorMensajeTexto: document.getElementById('p4-error-mensaje-texto'),
+    p4ResumenLista: document.getElementById('p4-resumen-lista'),
+    p4NotificacionesLista: document.getElementById('p4-notificaciones-lista'),
+    btnReiniciarDesdeP4: document.getElementById('btn-reiniciar-desde-p4'),
+    btnVolverInicioError: document.getElementById('btn-volver-inicio-error')
   };
 
   // --- Helper de Fetch con cabecera obligatoria X-Empleado-Id ---
@@ -200,9 +209,17 @@
       }
     });
 
-    // Mover el foco al título único de la página
-    if (el.pasoTitulo) {
+    // Mover el foco al título del paso correspondiente
+    if (stepNumber === 1 && el.pasoTitulo) {
       el.pasoTitulo.focus();
+    } else if (stepNumber === 3 && el.p3Titulo) {
+      el.p3Titulo.focus();
+    } else if (stepNumber === 4) {
+      if (el.p4VistaError && !el.p4VistaError.hidden && el.p4TituloError) {
+        el.p4TituloError.focus();
+      } else if (el.p4Titulo) {
+        el.p4Titulo.focus();
+      }
     }
   }
 
@@ -868,19 +885,9 @@
           if (errData && errData.mensaje) msg = errData.mensaje;
         } catch (_) {}
 
-        if (el.btnConfirmarRecepcion) {
-          el.btnConfirmarRecepcion.disabled = false;
-          el.btnConfirmarRecepcion.removeAttribute('aria-busy');
-          el.btnConfirmarRecepcion.textContent = 'Confirmar recepción';
-        }
-        if (el.btnNoConfirmar) {
-          el.btnNoConfirmar.disabled = false;
-        }
-        if (el.dialogError && el.dialogErrorMensaje) {
-          el.dialogErrorMensaje.textContent = msg;
-          el.dialogError.hidden = false;
-        }
+        el.dialogConfirmacion.close();
         state.isConfirmingOrCancelling = false;
+        renderPaso4Error(msg);
         return;
       }
 
@@ -890,24 +897,14 @@
       el.dialogConfirmacion.close();
       state.isConfirmingOrCancelling = false;
 
-      // Avanzar al Paso 4 (placeholder)
+      // Avanzar al Paso 4
       renderPaso4(data);
       goToStep(4);
 
     } catch (err) {
-      if (el.btnConfirmarRecepcion) {
-        el.btnConfirmarRecepcion.disabled = false;
-        el.btnConfirmarRecepcion.removeAttribute('aria-busy');
-        el.btnConfirmarRecepcion.textContent = 'Confirmar recepción';
-      }
-      if (el.btnNoConfirmar) {
-        el.btnNoConfirmar.disabled = false;
-      }
-      if (el.dialogError && el.dialogErrorMensaje) {
-        el.dialogErrorMensaje.textContent = 'Ocurrió un problema de conexión al registrar la recepción.';
-        el.dialogError.hidden = false;
-      }
+      el.dialogConfirmacion.close();
       state.isConfirmingOrCancelling = false;
+      renderPaso4Error('Ocurrió un problema de conexión al registrar la recepción. No se modificó ningún dato.');
     }
   }
 
@@ -949,20 +946,74 @@
   }
 
   // =========================================================================
-  // PASO 4 – Resultado (Placeholder)
+  // PASO 4 – Resultado
   // =========================================================================
 
   function renderPaso4(resultado) {
-    if (!el.p4ResultadoDetalle) return;
-    el.p4ResultadoDetalle.innerHTML = `
-      <p>${escapeHtml(resultado.mensaje || 'La recepción del bolsín ha sido registrada.')}</p>
-      <ul>
-        <li><strong>Bolsín N°:</strong> ${escapeHtml(String(resultado.numeroBolsin ?? state.bolsinDetalle?.numeroBolsin ?? '-'))}</li>
-        <li><strong>Nuevo estado:</strong> ${escapeHtml(resultado.nuevoEstadoBolsin ?? 'Recibido en CM destino')}</li>
-        <li><strong>Remitos actualizados:</strong> ${escapeHtml(String(resultado.remitosActualizados ?? 0))}</li>
-        <li><strong>Documentaciones actualizadas:</strong> ${escapeHtml(String(resultado.documentacionesActualizadas ?? 0))}</li>
-      </ul>
-    `;
+    if (el.p4VistaExito) el.p4VistaExito.hidden = false;
+    if (el.p4VistaError) el.p4VistaError.hidden = true;
+
+    if (el.p4Subtitulo && resultado.mensaje) {
+      el.p4Subtitulo.textContent = resultado.mensaje;
+    }
+
+    const numBolsin = resultado.numeroBolsin ?? state.bolsinDetalle?.numeroBolsin ?? '-';
+    // Nombre del estado del modelo (State) tal como lo devuelve el backend, sin textos inventados
+    const nuevoEstado = resultado.nuevoEstadoBolsin ?? '';
+    const remitos = resultado.remitosActualizados ?? 0;
+    const docs = resultado.documentacionesActualizadas ?? 0;
+
+    if (el.p4ResumenLista) {
+      el.p4ResumenLista.innerHTML = `
+        <li>
+          <span class="resultado-item-label">Bolsín N°</span>
+          <strong class="tabular-nums">${escapeHtml(String(numBolsin))}</strong>
+        </li>
+        <li>
+          <span class="resultado-item-label">Nuevo estado</span>
+          <strong class="estado-destacado">${escapeHtml(nuevoEstado)}</strong>
+        </li>
+        <li>
+          <span class="resultado-item-label">Remitos actualizados</span>
+          <strong class="tabular-nums">${formatearRemitos(remitos)}</strong>
+        </li>
+        <li>
+          <span class="resultado-item-label">Documentaciones actualizadas</span>
+          <strong class="tabular-nums">${formatearDocumentaciones(docs)}</strong>
+        </li>
+      `;
+    }
+
+    if (el.p4NotificacionesLista) {
+      const notifs = resultado.notificaciones || [];
+      if (notifs.length === 0) {
+        el.p4NotificacionesLista.innerHTML = `
+          <p class="notificaciones-vacias text-muted">No se enviaron notificaciones.</p>
+        `;
+      } else {
+        el.p4NotificacionesLista.innerHTML = notifs.map(n => `
+          <div class="notificacion-item">
+            <div class="notificacion-destinatario">
+              <span class="notificacion-icono" aria-hidden="true">✉</span>
+              <strong>${escapeHtml(n.cmOrigen ?? 'Comisión Médica')}</strong>
+              <span class="notificacion-email">&lt;${escapeHtml(n.email ?? '')}&gt;</span>
+            </div>
+            <div class="notificacion-mensaje">
+              <span class="notificacion-mensaje-label">Mensaje:</span> ${escapeHtml(n.asunto ?? '')}
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+  }
+
+  function renderPaso4Error(mensaje) {
+    if (el.p4VistaExito) el.p4VistaExito.hidden = true;
+    if (el.p4VistaError) el.p4VistaError.hidden = false;
+    if (el.p4ErrorMensajeTexto) {
+      el.p4ErrorMensajeTexto.textContent = mensaje || 'No se pudo registrar la recepción. No se modificó ningún dato.';
+    }
+    goToStep(4);
   }
 
   // --- Registro de Event Listeners ---
@@ -1033,9 +1084,15 @@
       });
     }
 
-    // Paso 4 – Resultado (Placeholder)
+    // Paso 4 – Resultado
     if (el.btnReiniciarDesdeP4) {
       el.btnReiniciarDesdeP4.addEventListener('click', () => {
+        reiniciarWizard();
+      });
+    }
+
+    if (el.btnVolverInicioError) {
+      el.btnVolverInicioError.addEventListener('click', () => {
         reiniciarWizard();
       });
     }
