@@ -161,7 +161,10 @@ public class Bolsin {
      * CU 28 – Paso 4: Retorna el nombre de la Comisión Médica de origen.
      */
     public String buscarCMOrigen() {
-        return this.origen != null ? this.origen.getNombre() : "";
+        if (this.origen != null && this.origen.esDeOrigen()) {
+            return this.origen.getNombre();
+        }
+        return "";
     }
 
     /**
@@ -182,7 +185,7 @@ public class Bolsin {
      * CU 28 – Paso 11a: Registra la recepción física del bolsín en la CM destino.
      * Cierra el cambio de estado actual y genera uno nuevo con estado 'Recibido en CM destino'.
      */
-    public void recibir(LocalDateTime fechaHoraActual, Empleado responsable, EstadoBolsin estadoRecibido) {
+    public void recibir(LocalDateTime fechaHoraActual, String[] responsable, EstadoBolsin estadoRecibido) {
         CambioEstadoBolsin actual = buscarEstadoActual();
         if (actual != null) {
             actual.setFechaHoraFin(fechaHoraActual);
@@ -194,14 +197,14 @@ public class Bolsin {
     /**
      * Instancia un nuevo cambio de estado para el bolsín.
      */
-    public CambioEstadoBolsin crearCambioEstadoBolsin(LocalDateTime fechaHoraActual, Empleado responsable, EstadoBolsin estadoRecibido) {
-        return new CambioEstadoBolsin(fechaHoraActual, null, estadoRecibido, responsable);
+    public CambioEstadoBolsin crearCambioEstadoBolsin(LocalDateTime fechaHoraActual, String[] responsable, EstadoBolsin estadoRecibido) {
+        return new CambioEstadoBolsin(fechaHoraActual, responsable, estadoRecibido);
     }
 
     /**
      * CU 28 – Paso 11b: Propaga la recepción y aceptación a todos los remitos del bolsín.
      */
-    public void recibirYAceptarRemitos(EstadoRemito estadoRecibidoYAceptado, LocalDateTime fechaHoraActual, Empleado responsable) {
+    public void recibirYAceptarRemitos(EstadoRemito estadoRecibidoYAceptado, LocalDateTime fechaHoraActual, String[] responsable) {
         for (Remito r : this.remito) {
             r.recibirYAceptar(estadoRecibidoYAceptado, fechaHoraActual, responsable);
         }

@@ -41,8 +41,20 @@ X-Empleado-Id: {{empleado_cordoba}}
 Accept: application/json
 
 ###
+### PASO 1 (filtros): Listar catálogo de comisiones médicas (para desplegable CM de origen)
+# Espera: 200 con lista de comisiones médicas [ { "nombre": "CM Córdoba" }, ... ]
+GET {{base}}/api/comisiones-medicas
+Accept: application/json
+
+###
 ### PASO 4 (filtros): Listar bolsines enviados (sin filtros)
 GET {{base}}/api/recepcion-bolsin/bolsines
+X-Empleado-Id: {{empleado_cordoba}}
+Accept: application/json
+
+###
+### PASO 4 (filtros): Filtrar bolsines por CM de origen seleccionada
+GET {{base}}/api/recepcion-bolsin/bolsines?cmOrigen=CM+Córdoba
 X-Empleado-Id: {{empleado_cordoba}}
 Accept: application/json
 

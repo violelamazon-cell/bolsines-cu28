@@ -2,7 +2,6 @@ package ar.edu.utn.frc.dsi.bolsines.entidades.estado;
 
 import ar.edu.utn.frc.dsi.bolsines.entidades.CambioEstadoDocumentacion;
 import ar.edu.utn.frc.dsi.bolsines.entidades.Documentacion;
-import ar.edu.utn.frc.dsi.bolsines.entidades.Empleado;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,12 +17,10 @@ public abstract class Estado {
 
     private final String nombre;
     private final String descripcion;
-    private final String ambito;
 
-    public Estado(String nombre, String descripcion, String ambito) {
+    public Estado(String nombre, String descripcion) {
         this.nombre = nombre;
         this.descripcion = descripcion;
-        this.ambito = ambito;
     }
 
     public String getNombre() {
@@ -34,10 +31,6 @@ public abstract class Estado {
         return descripcion;
     }
 
-    public String getAmbito() {
-        return ambito;
-    }
-
     // =========================================================================
     // Métodos de transición de la Máquina de Estados (CU 28 y otros casos de uso)
     // =========================================================================
@@ -45,28 +38,28 @@ public abstract class Estado {
     /**
      * Transición CU 28: Aceptar la documentación recibida en la CM destino.
      */
-    public void aceptar(Documentacion doc, LocalDateTime ahora, Empleado resp, List<CambioEstadoDocumentacion> cambios) {
+    public void aceptar(Documentacion doc, LocalDateTime ahora, String[] resp, List<CambioEstadoDocumentacion> cambios) {
         throw transicionNoPermitida("aceptar");
     }
 
     /**
      * Transición CU 28 (A4): Rechazar documentación que no corresponde a la CM destino.
      */
-    public void rechazar(Documentacion doc, LocalDateTime ahora, Empleado resp, List<CambioEstadoDocumentacion> cambios) {
+    public void rechazar(Documentacion doc, LocalDateTime ahora, String[] resp, List<CambioEstadoDocumentacion> cambios) {
         throw transicionNoPermitida("rechazar");
     }
 
     /**
      * Transición CU 28 (A5): Redirigir documentación a otra área (en CMC).
      */
-    public void redirigir(Documentacion doc, LocalDateTime ahora, Empleado resp, List<CambioEstadoDocumentacion> cambios) {
+    public void redirigir(Documentacion doc, LocalDateTime ahora, String[] resp, List<CambioEstadoDocumentacion> cambios) {
         throw transicionNoPermitida("redirigir");
     }
 
     /**
      * Transición CU 28 (A3): Registrar no recepción de documentación faltante en el bolsín.
      */
-    public void registrarNoRecepcion(Documentacion doc, LocalDateTime ahora, Empleado resp, List<CambioEstadoDocumentacion> cambios) {
+    public void registrarNoRecepcion(Documentacion doc, LocalDateTime ahora, String[] resp, List<CambioEstadoDocumentacion> cambios) {
         throw transicionNoPermitida("registrarNoRecepcion");
     }
 

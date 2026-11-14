@@ -155,6 +155,8 @@ class RecepcionBolsinIntegrationTests {
                 .andExpect(jsonPath("$.confirmado").value(true))
                 .andExpect(jsonPath("$.numeroBolsin").value(1002))
                 .andExpect(jsonPath("$.nuevoEstadoBolsin").value("Recibido en CM destino"))
+                .andExpect(jsonPath("$.nuevoEstadoRemitos").value("Recibido y Aceptado"))
+                .andExpect(jsonPath("$.nuevoEstadoDocumentaciones").value("Recibida y aceptada"))
                 .andExpect(jsonPath("$.remitosActualizados").value(greaterThan(0)))
                 .andExpect(jsonPath("$.documentacionesActualizadas").value(greaterThan(0)))
                 .andExpect(jsonPath("$.notificaciones", hasSize(greaterThanOrEqualTo(1))));
@@ -285,6 +287,30 @@ class RecepcionBolsinIntegrationTests {
         mockMvc.perform(post("/api/recepcion-bolsin/cancelar")
                         .header("X-Empleado-Id", EMP_CORDOBA))
                 .andExpect(status().isNoContent());
+    }
+
+    // =========================================================================
+    // GET /api/comisiones-medicas
+    // =========================================================================
+
+    @Test
+    @DisplayName("GET /api/comisiones-medicas -> lista no vacía, ordenada, con campo nombre")
+    void listarComisionesMedicas_retornaListaOrdenada() throws Exception {
+        mockMvc.perform(get("/api/comisiones-medicas"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(2))))
+                .andExpect(jsonPath("$[0].nombre").isNotEmpty())
+                // Verifica orden alfabético: el primer nombre <= el segundo
+                .andExpect(result -> {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    var list = mapper.readTree(result.getResponse().getContentAsString());
+                    String primero = list.get(0).get("nombre").asText();
+                    String segundo = list.get(1).get("nombre").asText();
+                    org.junit.jupiter.api.Assertions.assertTrue(
+                        primero.compareToIgnoreCase(segundo) <= 0,
+                        "Las comisiones médicas no están ordenadas alfabéticamente: '" + primero + "' > '" + segundo + "'"
+                    );
+                });
     }
 }
 

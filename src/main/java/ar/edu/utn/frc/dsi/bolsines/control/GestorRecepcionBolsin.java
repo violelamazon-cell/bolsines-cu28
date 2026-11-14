@@ -37,17 +37,20 @@ public class GestorRecepcionBolsin {
     private final EmpleadoRepository empleadoRepository;
     private final EstadoBolsinRepository estadoBolsinRepository;
     private final EstadoRemitoRepository estadoRemitoRepository;
+    private final ComisionMedicaRepository comisionMedicaRepository;
     private final NotificadorEmail notificadorEmail;
 
     public GestorRecepcionBolsin(BolsinRepository bolsinRepository,
                                   EmpleadoRepository empleadoRepository,
                                   EstadoBolsinRepository estadoBolsinRepository,
                                   EstadoRemitoRepository estadoRemitoRepository,
+                                  ComisionMedicaRepository comisionMedicaRepository,
                                   NotificadorEmail notificadorEmail) {
         this.bolsinRepository = bolsinRepository;
         this.empleadoRepository = empleadoRepository;
         this.estadoBolsinRepository = estadoBolsinRepository;
         this.estadoRemitoRepository = estadoRemitoRepository;
+        this.comisionMedicaRepository = comisionMedicaRepository;
         this.notificadorEmail = notificadorEmail;
     }
 
@@ -281,7 +284,7 @@ public class GestorRecepcionBolsin {
             return new ConfirmarRecepcionResponse(
                 false,
                 "No se registró la recepción. No se modificó ningún dato.",
-                null, null, 0, 0,
+                null, null, null, null, 0, 0,
                 Collections.emptyList()
             );
         }
@@ -313,19 +316,29 @@ public class GestorRecepcionBolsin {
 
         // Paso 11a: actualizar estado del bolsín
         EstadoBolsin estadoBolsinRecibido = buscarEstadoBolsinRecibido();
-        recibirBolsin(bolsin, fechaHoraActual, empleado, estadoBolsinRecibido);
+        EstadoRemito estadoRemitoRecibido = buscarEstadoRemitoRecibidoYAceptado();
+
+        String[] empleadoLogueado = buscarNombreEmpleado(empleado);
+
+        recibirBolsin(bolsin, fechaHoraActual, empleadoLogueado, estadoBolsinRecibido);
 
         // Paso 11b y 11c: actualizar remitos y documentación (patrón State)
-        EstadoRemito estadoRemitoRecibido = buscarEstadoRemitoRecibidoYAceptado();
-        recibirYAceptarRemitos(bolsin, estadoRemitoRecibido, fechaHoraActual, empleado);
+        recibirYAceptarRemitos(bolsin, estadoRemitoRecibido, fechaHoraActual, empleadoLogueado);
 
         int totalRemitos = bolsin.buscarRemitosBolsin().size();
         int totalDocs = contarDocumentaciones(bolsin);
 
+        String nuevoEstadoRemitos = estadoRemitoRecibido.getNombre();
+        String nuevoEstadoDocumentaciones = bolsin.buscarRemitosBolsin().stream()
+            .flatMap(r -> r.getDetalleRemito().stream())
+            .map(d -> d.buscarDocumentacionRemito().getEstado().getNombre())
+            .findFirst()
+            .orElse(null);
+
         bolsinRepository.save(bolsin);
 
         // Paso 12: Llamar al CU 29
-        List<NotificacionDto> notificaciones = llamarCU29NotificarRecepcionDeBolsin(bolsin, empleado);
+        List<NotificacionDto> notificaciones = llamarCU29NotificarRecepcionDeBolsin(bolsin);
 
         finCU();
 
@@ -334,6 +347,8 @@ public class GestorRecepcionBolsin {
             "La recepción del bolsín N° " + numeroBolsin + " fue registrada correctamente.",
             numeroBolsin,
             EstadoBolsin.RECIBIDO_EN_CM_DESTINO,
+            nuevoEstadoRemitos,
+            nuevoEstadoDocumentaciones,
             totalRemitos,
             totalDocs,
             notificaciones
@@ -362,11 +377,18 @@ public class GestorRecepcionBolsin {
             ));
     }
 
-    public void recibirBolsin(Bolsin bolsin, LocalDateTime fechaHoraActual, Empleado responsable, EstadoBolsin estadoRecibido) {
+    public String[] buscarNombreEmpleado(Empleado empleado) {
+        if (empleado == null) {
+            return new String[]{"", ""};
+        }
+        return new String[]{empleado.getNombre(), empleado.getApellido()};
+    }
+
+    public void recibirBolsin(Bolsin bolsin, LocalDateTime fechaHoraActual, String[] responsable, EstadoBolsin estadoRecibido) {
         bolsin.recibir(fechaHoraActual, responsable, estadoRecibido);
     }
 
-    public void recibirYAceptarRemitos(Bolsin bolsin, EstadoRemito estadoRemitoRecibido, LocalDateTime fechaHoraActual, Empleado responsable) {
+    public void recibirYAceptarRemitos(Bolsin bolsin, EstadoRemito estadoRemitoRecibido, LocalDateTime fechaHoraActual, String[] responsable) {
         bolsin.recibirYAceptarRemitos(estadoRemitoRecibido, fechaHoraActual, responsable);
     }
 
@@ -374,7 +396,7 @@ public class GestorRecepcionBolsin {
      * CU 28 Paso 12: Notifica a cada Comisión Médica de origen que aportó documentación.
      * Si ocurre un error de envío (CU 29), se captura y loguea para no revertir la recepción (D9).
      */
-    public List<NotificacionDto> llamarCU29NotificarRecepcionDeBolsin(Bolsin bolsin, Empleado responsable) {
+    public List<NotificacionDto> llamarCU29NotificarRecepcionDeBolsin(Bolsin bolsin) {
         List<NotificacionDto> notificaciones = new ArrayList<>();
 
         Map<String, ComisionMedica> remitentes = new LinkedHashMap<>();
@@ -440,6 +462,18 @@ public class GestorRecepcionBolsin {
                 emp.getCM().getNombre(),
                 emp.getCM().getCodigo()
             ))
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Lista los nombres de todas las Comisiones Médicas, ordenados alfabéticamente.
+     * Se usa para poblar el desplegable de filtro de CM origen en el Paso 1.
+     */
+    @Transactional(readOnly = true)
+    public List<ComisionMedicaDto> listarComisionesMedicas() {
+        return comisionMedicaRepository.findAll().stream()
+            .map(cm -> new ComisionMedicaDto(cm.getNombre()))
+            .sorted(Comparator.comparing(ComisionMedicaDto::nombre))
             .collect(Collectors.toList());
     }
 

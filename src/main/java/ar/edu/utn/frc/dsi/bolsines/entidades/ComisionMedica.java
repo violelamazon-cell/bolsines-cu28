@@ -85,6 +85,10 @@ public class ComisionMedica {
     // Métodos del dominio / Patrón Experto
     // =========================================================================
 
+    public boolean esDeOrigen() {
+        return this.nombre != null && !this.nombre.trim().isEmpty();
+    }
+
     public boolean esDeOrigen(String cmOrigen) {
         if (cmOrigen == null || cmOrigen.trim().isEmpty()) {
             return false;
