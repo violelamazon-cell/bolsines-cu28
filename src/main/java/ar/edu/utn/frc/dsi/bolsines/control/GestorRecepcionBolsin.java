@@ -281,7 +281,7 @@ public class GestorRecepcionBolsin {
             return new ConfirmarRecepcionResponse(
                 false,
                 "No se registró la recepción. No se modificó ningún dato.",
-                null, null, 0, 0,
+                null, null, null, null, 0, 0,
                 Collections.emptyList()
             );
         }
@@ -322,6 +322,13 @@ public class GestorRecepcionBolsin {
         int totalRemitos = bolsin.buscarRemitosBolsin().size();
         int totalDocs = contarDocumentaciones(bolsin);
 
+        String nuevoEstadoRemitos = estadoRemitoRecibido.getNombre();
+        String nuevoEstadoDocumentaciones = bolsin.buscarRemitosBolsin().stream()
+            .flatMap(r -> r.getDetalleRemito().stream())
+            .map(d -> d.buscarDocumentacionRemito().getEstado().getNombre())
+            .findFirst()
+            .orElse(null);
+
         bolsinRepository.save(bolsin);
 
         // Paso 12: Llamar al CU 29
@@ -334,6 +341,8 @@ public class GestorRecepcionBolsin {
             "La recepción del bolsín N° " + numeroBolsin + " fue registrada correctamente.",
             numeroBolsin,
             EstadoBolsin.RECIBIDO_EN_CM_DESTINO,
+            nuevoEstadoRemitos,
+            nuevoEstadoDocumentaciones,
             totalRemitos,
             totalDocs,
             notificaciones

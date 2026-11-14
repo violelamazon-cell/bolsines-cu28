@@ -133,7 +133,7 @@ Todos los endpoints responden en formato JSON y manejan errores de manera unifor
 | `GET` | `/api/recepcion-bolsin/bolsines` | `?numeroPrecinto=&cmOrigen=` | **Paso 4 (Filtro):** Filtra bolsines por precinto o CM origen. | `200 OK` / `404 Not Found` (A1 / A2) |
 | `POST` | `/api/recepcion-bolsin/seleccionar-bolsin` | Body: `{ "numeroBolsin": 1001 }` | **Pasos 5–7:** Selecciona bolsín y devuelve remitos, documentaciones y opciones de recepción. | `200 OK` / `404 Not Found` |
 | `POST` | `/api/recepcion-bolsin/seleccionar-recepcion` | Body: `{ "numeroBolsin": 1001, "opcion": 1 }` | **Pasos 8–9:** Valida opción y prepara el resumen de confirmación. Opciones 2, 3 y 4 devuelven 501. | `200 OK` / `501 Not Implemented` |
-| `POST` | `/api/recepcion-bolsin/confirmar` | Body: `{ "numeroBolsin": 1001, "opcion": 1, "confirmado": true }` | **Pasos 10–12:** Si es `true`, ejecuta la transacción de recepción física y notificaciones. Si es `false` (A6), no modifica la base de datos. | `200 OK` / `409 Conflict` |
+| `POST` | `/api/recepcion-bolsin/confirmar` | Body: `{ "numeroBolsin": 1001, "opcion": 1, "confirmado": true }` | **Pasos 10–12:** Si es `true`, ejecuta la transacción de recepción física y notificaciones. Retorna `ConfirmarRecepcionResponse` con `nuevoEstadoBolsin`, `nuevoEstadoRemitos`, `nuevoEstadoDocumentaciones`, `remitosActualizados`, `documentacionesActualizadas` y `notificaciones`. Si es `false` (A6), no modifica la base de datos. | `200 OK` / `409 Conflict` |
 | `POST` | `/api/recepcion-bolsin/cancelar` | — | **Obs. 1:** Cancela el proceso de recepción en curso sin alterar datos. | `204 No Content` |
 
 ---

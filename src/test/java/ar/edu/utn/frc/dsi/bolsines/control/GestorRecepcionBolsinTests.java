@@ -71,6 +71,8 @@ class GestorRecepcionBolsinTests {
         assertTrue(confirmacion.confirmado());
         assertEquals(nroBolsin, confirmacion.numeroBolsin());
         assertEquals("Recibido en CM destino", confirmacion.nuevoEstadoBolsin());
+        assertEquals("Recibido y Aceptado", confirmacion.nuevoEstadoRemitos());
+        assertEquals("Recibida y aceptada", confirmacion.nuevoEstadoDocumentaciones());
         assertEquals(2, confirmacion.remitosActualizados());
         assertEquals(3, confirmacion.documentacionesActualizadas());
 

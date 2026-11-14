@@ -155,6 +155,8 @@ class RecepcionBolsinIntegrationTests {
                 .andExpect(jsonPath("$.confirmado").value(true))
                 .andExpect(jsonPath("$.numeroBolsin").value(1002))
                 .andExpect(jsonPath("$.nuevoEstadoBolsin").value("Recibido en CM destino"))
+                .andExpect(jsonPath("$.nuevoEstadoRemitos").value("Recibido y Aceptado"))
+                .andExpect(jsonPath("$.nuevoEstadoDocumentaciones").value("Recibida y aceptada"))
                 .andExpect(jsonPath("$.remitosActualizados").value(greaterThan(0)))
                 .andExpect(jsonPath("$.documentacionesActualizadas").value(greaterThan(0)))
                 .andExpect(jsonPath("$.notificaciones", hasSize(greaterThanOrEqualTo(1))));

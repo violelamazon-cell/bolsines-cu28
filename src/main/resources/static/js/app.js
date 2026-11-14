@@ -1007,8 +1007,18 @@
 
     const numBolsin = resultado.numeroBolsin ?? state.bolsinDetalle?.numeroBolsin ?? '-';
     const nuevoEstado = resultado.nuevoEstadoBolsin ?? '';
+    const nuevoEstadoRemitos = resultado.nuevoEstadoRemitos ?? '';
+    const nuevoEstadoDocs = resultado.nuevoEstadoDocumentaciones ?? '';
     const remitos = resultado.remitosActualizados ?? 0;
     const docs = resultado.documentacionesActualizadas ?? 0;
+
+    const textoRemitos = nuevoEstadoRemitos
+      ? `${formatearRemitos(remitos)} · <span class="estado-destacado">${escapeHtml(nuevoEstadoRemitos)}</span>`
+      : formatearRemitos(remitos);
+
+    const textoDocs = nuevoEstadoDocs
+      ? `${formatearDocumentaciones(docs)} · <span class="estado-destacado">${escapeHtml(nuevoEstadoDocs)}</span>`
+      : formatearDocumentaciones(docs);
 
     if (el.p4ResumenLista) {
       el.p4ResumenLista.innerHTML = `
@@ -1022,11 +1032,11 @@
         </li>
         <li>
           <span class="resultado-item-label">Remitos actualizados</span>
-          <strong class="tabular-nums">${formatearRemitos(remitos)}</strong>
+          <strong class="tabular-nums">${textoRemitos}</strong>
         </li>
         <li>
           <span class="resultado-item-label">Documentaciones actualizadas</span>
-          <strong class="tabular-nums">${formatearDocumentaciones(docs)}</strong>
+          <strong class="tabular-nums">${textoDocs}</strong>
         </li>
       `;
     }

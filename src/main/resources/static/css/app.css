@@ -98,6 +98,7 @@
 }
 
 /* Tarjeta de usuario */
+button.login-user-card,
 .login-user-card {
   display: flex;
   flex-direction: column;
@@ -106,32 +107,42 @@
   padding: 1.35rem 1rem 1.15rem;
   border: 2px solid #D5DBE3;
   border-radius: 0.75rem;
+  background-color: #FFFFFF;
   background: #FFFFFF;
+  color: #1B2430;
+  --pico-background-color: #FFFFFF;
+  --pico-border-color: #D5DBE3;
+  --pico-color: #1B2430;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s, transform 0.1s;
   text-align: center;
   font: inherit;
-  color: inherit;
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
   box-sizing: border-box;
 }
 
+button.login-user-card:hover,
+button.login-user-card:focus,
+button.login-user-card:focus-visible,
+button.login-user-card.selected,
 .login-user-card:hover,
-.login-user-card:focus-visible {
+.login-user-card:focus,
+.login-user-card:focus-visible,
+.login-user-card.selected {
   border-color: #0B5CAD;
+  background-color: #E8F1FA;
+  background: #E8F1FA;
+  --pico-background-color: #E8F1FA;
+  --pico-border-color: #0B5CAD;
   box-shadow: 0 0 0 3px rgba(11, 92, 173, 0.18);
   outline: none;
 }
 
+button.login-user-card:active,
 .login-user-card:active {
   transform: scale(0.98);
-}
-
-.login-user-card.selected {
-  border-color: #0B5CAD;
-  background: #E8F1FA;
 }
 
 /* Avatar con iniciales arriba */
@@ -177,9 +188,6 @@
   font-size: 0.82rem;
   color: #5A6675;
   line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 100%;
 }
 
@@ -1070,21 +1078,23 @@ body {
 
 .filtros-form {
   display: flex;
-  gap: 0.75rem;
+  gap: 1.25rem;
   align-items: flex-end;
   flex-wrap: wrap;
   margin-bottom: 1.25rem;
   background-color: #F8FAFC;
-  padding: 1rem;
-  border-radius: var(--pico-border-radius);
+  padding: 1.25rem;
+  border-radius: 16px;
   border: 1px solid var(--app-border);
+  box-sizing: border-box;
 }
 
 .filtro-field {
   flex: 1 1 200px;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .filtro-field label {
@@ -1101,7 +1111,7 @@ body {
 
 .filtro-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .filtro-actions button {
@@ -1278,10 +1288,14 @@ tbody tr[aria-selected="true"] {
   .filtros-form {
     flex-direction: column;
     align-items: stretch;
+    padding: 1.25rem;
+    gap: 1rem;
+    border-radius: 16px;
   }
 
   .filtro-actions {
     flex-direction: column;
+    gap: 0.5rem;
   }
 
   .filtro-actions button {
