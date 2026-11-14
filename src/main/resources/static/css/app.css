@@ -124,13 +124,9 @@ button.login-user-card,
 }
 
 button.login-user-card:hover,
-button.login-user-card:focus,
 button.login-user-card:focus-visible,
-button.login-user-card.selected,
 .login-user-card:hover,
-.login-user-card:focus,
-.login-user-card:focus-visible,
-.login-user-card.selected {
+.login-user-card:focus-visible {
   border-color: #0B5CAD;
   background-color: #E8F1FA;
   background: #E8F1FA;
@@ -1759,7 +1755,7 @@ article.resultado-resumen-card {
 .resultado-resumen-card ul,
 .resultado-resumen-card ol {
   display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
   gap: 0.75rem 1.25rem !important;
   list-style: none !important;
   padding: 0 !important;
@@ -1817,8 +1813,11 @@ article.resultado-resumen-card {
 .resultado-lista-resumen .estado-destacado,
 #p4-resumen-lista .estado-destacado,
 .resultado-resumen-card .estado-destacado {
+  display: block !important;
   color: var(--app-success, #1E7F4F) !important;
   font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  margin-top: 0.1rem !important;
   opacity: 1 !important;
   visibility: visible !important;
 }

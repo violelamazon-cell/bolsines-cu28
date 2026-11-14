@@ -78,6 +78,15 @@
       cargarContadorPendientes();
     } else if (hash === 'recepcion') {
       actualizarHeaderRecepcion();
+    } else if (hash === 'login') {
+      // Limpiar estado persistente de selección al volver al login
+      if (loginEl && loginEl.grid) {
+        loginEl.grid.querySelectorAll('.login-user-card').forEach(c => {
+          c.classList.remove('selected');
+          c.disabled = false;
+          c.removeAttribute('aria-busy');
+        });
+      }
     }
   }
 
@@ -1013,12 +1022,12 @@
     const docs = resultado.documentacionesActualizadas ?? 0;
 
     const textoRemitos = nuevoEstadoRemitos
-      ? `${formatearRemitos(remitos)} · <span class="estado-destacado">${escapeHtml(nuevoEstadoRemitos)}</span>`
-      : formatearRemitos(remitos);
+      ? `${escapeHtml(formatearRemitos(remitos))}<span class="estado-destacado">${escapeHtml(nuevoEstadoRemitos)}</span>`
+      : escapeHtml(formatearRemitos(remitos));
 
     const textoDocs = nuevoEstadoDocs
-      ? `${formatearDocumentaciones(docs)} · <span class="estado-destacado">${escapeHtml(nuevoEstadoDocs)}</span>`
-      : formatearDocumentaciones(docs);
+      ? `${escapeHtml(formatearDocumentaciones(docs))}<span class="estado-destacado">${escapeHtml(nuevoEstadoDocs)}</span>`
+      : escapeHtml(formatearDocumentaciones(docs));
 
     if (el.p4ResumenLista) {
       el.p4ResumenLista.innerHTML = `
