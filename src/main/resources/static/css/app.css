@@ -88,15 +88,16 @@
   margin-bottom: 1.75rem;
 }
 
-/* Grid de tarjetas: 3 col en notebook, lista en móvil */
+/* Grid de tarjetas: auto-fill en notebook, 1 col en móvil */
 .login-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
   margin-bottom: 1.5rem;
+  width: 100%;
 }
 
-/* Tarjeta de usuario — notebook */
+/* Tarjeta de usuario */
 .login-user-card {
   display: flex;
   flex-direction: column;
@@ -113,6 +114,8 @@
   color: inherit;
   -webkit-appearance: none;
   appearance: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .login-user-card:hover,
@@ -131,7 +134,7 @@
   background: #E8F1FA;
 }
 
-/* Avatar con iniciales */
+/* Avatar con iniciales arriba */
 .login-user-avatar {
   display: inline-flex;
   align-items: center;
@@ -148,53 +151,55 @@
   border: 2px solid rgba(11, 92, 173, 0.2);
 }
 
+.login-user-info-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  min-width: 0;
+}
+
 .login-user-nombre {
+  display: block;
   font-size: 0.95rem;
   font-weight: 700;
   color: #1B2430;
   line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .login-user-cm {
+  display: block;
   font-size: 0.82rem;
   color: #5A6675;
   line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
-/* Versión lista (móvil < 600px) */
 @media (max-width: 599px) {
+  #screen-login.screen-active {
+    padding: 1.5rem 0.75rem;
+  }
+  .login-card {
+    padding: 1.5rem 1rem 1.25rem;
+  }
   .login-grid {
     grid-template-columns: 1fr;
-  }
-  .login-user-card {
-    flex-direction: row;
-    align-items: center;
-    gap: 0.9rem;
-    padding: 0.9rem 1rem;
-    text-align: left;
-  }
-  .login-user-card::after {
-    content: '›';
-    margin-left: auto;
-    font-size: 1.3rem;
-    color: #5A6675;
-    line-height: 1;
-  }
-  .login-user-avatar {
-    width: 2.5rem;
-    height: 2.5rem;
-    font-size: 0.85rem;
-  }
-  .login-user-nombre,
-  .login-user-cm {
-    text-align: left;
+    gap: 0.75rem;
   }
 }
 
 /* Aviso amarillo */
 .login-aviso {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.6rem;
   background: #FFF4DB;
   border: 1px solid rgba(138, 90, 0, 0.25);
@@ -203,11 +208,19 @@
   font-size: 0.875rem;
   color: #8A5A00;
   line-height: 1.4;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.login-aviso span {
+  flex: 1;
+  min-width: 0;
 }
 
 .login-aviso-icon {
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
-  margin-top: 0.1rem;
 }
 
 /* Estado cargando login (reutiliza .loading-container) */
@@ -238,6 +251,7 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  flex-shrink: 0;
 }
 
 .home-logo-svg {
@@ -263,7 +277,7 @@
 .home-cm-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.65rem;
+  padding: 0.25rem 0.65rem;
   background: rgba(255,255,255,0.18);
   color: #FFFFFF;
   border: 1px solid rgba(255,255,255,0.35);
@@ -272,29 +286,38 @@
   font-weight: 700;
   letter-spacing: 0.01em;
   white-space: nowrap;
+  line-height: 1;
 }
 
 .home-user-info {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   color: rgba(255,255,255,0.92);
   font-size: 0.92rem;
+  line-height: 1;
 }
 
 .home-user-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
   opacity: 0.9;
 }
 
 .home-user-name {
   font-weight: 600;
   color: #FFFFFF;
+  white-space: nowrap;
 }
 
 .home-header-sep {
   color: rgba(255,255,255,0.4);
   font-size: 0.9rem;
   user-select: none;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
 
 .home-btn-logout {
@@ -311,7 +334,11 @@
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
   min-height: 32px;
+  height: 32px;
   white-space: nowrap;
+  margin: 0;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .home-btn-logout:hover,
@@ -324,13 +351,15 @@
 
 @media (max-width: 600px) {
   .home-header {
-    padding: 0 1rem;
+    padding: 0.5rem 1rem;
   }
-  .home-user-info {
-    display: none; /* en móvil solo el badge y botón */
+  .home-header-container {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-height: auto;
   }
-  .home-header-sep {
-    display: none;
+  .home-header-right {
+    gap: 0.5rem;
   }
 }
 
@@ -469,7 +498,7 @@
 }
 
 .home-step-active .home-step-label {
-  color: #F2B705;
+  color: #1B2430;
   font-weight: 700;
 }
 
@@ -640,42 +669,61 @@
   flex-wrap: wrap;
 }
 
+.rec-header-right .home-header-sep {
+  display: none;
+}
+
 .rec-usuario-nombre {
   font-size: 0.9rem;
   font-weight: 600;
   color: #1B2430;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
 
 .btn-link-discreto {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  background: none;
-  border: none;
+  gap: 0.35rem;
+  background: #FFFFFF;
+  border: 1px solid #D5DBE3;
   color: #5A6675;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 500;
   cursor: pointer;
-  padding: 0.3rem 0.5rem;
-  border-radius: 0.35rem;
-  transition: color 0.15s, background 0.15s;
+  padding: 0.3rem 0.65rem;
+  border-radius: 0.4rem;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
   text-decoration: none;
-  min-height: 36px;
+  min-height: 32px;
+  height: 32px;
+  white-space: nowrap;
+  margin: 0;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .btn-link-discreto:hover,
 .btn-link-discreto:focus-visible {
   color: #0B5CAD;
   background: #E8F1FA;
-  outline: 2px solid #0B5CAD;
+  border-color: #0B5CAD;
+  outline: 2px solid rgba(11, 92, 173, 0.25);
   outline-offset: 1px;
 }
 
 @media (max-width: 599px) {
-  .rec-header-right {
-    gap: 0.35rem;
+  .app-header {
+    padding: 0.5rem 1rem;
   }
-  .rec-usuario-nombre {
-    display: none;
+  .header-container {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .rec-header-right {
+    gap: 0.4rem;
   }
 }
 
@@ -735,6 +783,7 @@ body {
   padding: 0;
   font-size: 1rem;
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
 .tabular-nums {
