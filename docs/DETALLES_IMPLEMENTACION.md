@@ -77,9 +77,9 @@ La consigna de la cátedra exige que el ciclo de vida de la clase `Documentacion
 1. **Contexto (`Documentacion`):**
    * Archivo: `src/main/java/ar/edu/utn/frc/dsi/bolsines/entidades/Documentacion.java`
    * Mantiene una referencia polimórfica a la interfaz abstracta `Estado estado`.
-   * El método `aceptar(LocalDateTime fechaHoraActual, Empleado responsable)` contiene **cero condicionales**:
+   * El método `aceptar(LocalDateTime fechaHoraActual, String[] responsable)` contiene **cero condicionales**:
      ```java
-     public void aceptar(LocalDateTime fechaHoraActual, Empleado responsable) {
+     public void aceptar(LocalDateTime fechaHoraActual, String[] responsable) {
          this.estado.aceptar(this, fechaHoraActual, responsable, this.cambioEstado);
      }
      ```
@@ -92,7 +92,7 @@ La consigna de la cátedra exige que el ciclo de vida de la clase `Documentacion
    * Sobrescribe el método `aceptar(...)` ejecutando la secuencia exacta definida en el diagrama de secuencia E2 (paso 11c):
      ```java
      @Override
-     public void aceptar(Documentacion doc, LocalDateTime ahora, Empleado resp, List<CambioEstadoDocumentacion> cambios) {
+     public void aceptar(Documentacion doc, LocalDateTime ahora, String[] resp, List<CambioEstadoDocumentacion> cambios) {
          // 1. actual = buscarEstadoActual(cambios)
          CambioEstadoDocumentacion actual = buscarEstadoActual(cambios);
          // 2. actual.setFechaHoraFin(ahora)
@@ -118,6 +118,13 @@ Para no crear tablas redundantes en la base de datos para clases que no tienen a
 * Archivo: `src/main/java/ar/edu/utn/frc/dsi/bolsines/entidades/estado/EstadoConverter.java`
 * En base de datos, la columna `estado` de la tabla `documentaciones` se almacena como `VARCHAR(50)` con el nombre canónico (ej: `"En bolsín enviado"` o `"Recibida y aceptada"`).
 * Al leer de la base de datos, `EstadoFactory` reconstituye la instancia concreta del estado correspondiente.
+
+### 3.4 Persistencia de Responsable (`ResponsableConverter`) y Constructores de Cambio de Estado
+Para respetar la especificación del modelado (`responsableCE: string[]` / `empleadoLogueado: string[]` con nombre y apellido) sin desarmar la persistencia en una tabla extra, se utiliza un `AttributeConverter`:
+* Archivo: `src/main/java/ar/edu/utn/frc/dsi/bolsines/entidades/ResponsableConverter.java`
+* En base de datos, la columna `responsable_ce` de las tablas `cambios_estado_bolsin` y `cambios_estado_documentacion` se almacena como `VARCHAR(200)` en formato `"nombre|apellido"` (ej. `"Carlos|Gómez"`). Se asume la limitación técnica de que un nombre o apellido que contenga `"|"` rompería la lectura.
+* Al leer de la base de datos, se deserializa nuevamente en un arreglo `String[]{nombre, apellido}`.
+* **Constructores de dominio:** En correspondencia con los mensajes `new` del diagrama de secuencia E2, `CambioEstadoBolsin` y `CambioEstadoDocumentacion` cuentan con constructores de 3 parámetros `(fechaHoraInicio, responsable, estado)` que inicializan `fechaHoraFin` en `null`. El constructor sobrecargado de 4 parámetros se preserva exclusivamente para la siembra de datos históricos (`DataLoader`) y fixtures de prueba.
 
 ---
 

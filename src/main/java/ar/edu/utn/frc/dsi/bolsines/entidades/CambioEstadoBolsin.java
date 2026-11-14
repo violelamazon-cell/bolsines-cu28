@@ -22,14 +22,21 @@ public class CambioEstadoBolsin {
     @JoinColumn(name = "estado_bolsin_id", nullable = false)
     private EstadoBolsin estado;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "responsable_id", nullable = false)
-    private Empleado responsableCE;
+    @Convert(converter = ResponsableConverter.class)
+    @Column(name = "responsable_ce", nullable = false, length = 200)
+    private String[] responsableCE;
 
     public CambioEstadoBolsin() {
     }
 
-    public CambioEstadoBolsin(LocalDateTime fechaHoraInicio, LocalDateTime fechaHoraFin, EstadoBolsin estado, Empleado responsableCE) {
+    public CambioEstadoBolsin(LocalDateTime fechaHoraInicio, String[] responsable, EstadoBolsin estado) {
+        this.fechaHoraInicio = fechaHoraInicio;
+        this.fechaHoraFin = null;
+        this.responsableCE = responsable;
+        this.estado = estado;
+    }
+
+    public CambioEstadoBolsin(LocalDateTime fechaHoraInicio, LocalDateTime fechaHoraFin, EstadoBolsin estado, String[] responsableCE) {
         this.fechaHoraInicio = fechaHoraInicio;
         this.fechaHoraFin = fechaHoraFin;
         this.estado = estado;
@@ -64,11 +71,11 @@ public class CambioEstadoBolsin {
         this.estado = estado;
     }
 
-    public Empleado getResponsableCE() {
+    public String[] getResponsableCE() {
         return responsableCE;
     }
 
-    public void setResponsableCE(Empleado responsableCE) {
+    public void setResponsableCE(String[] responsableCE) {
         this.responsableCE = responsableCE;
     }
 

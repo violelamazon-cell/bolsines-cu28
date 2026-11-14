@@ -63,7 +63,7 @@ public class DetalleRemito {
      * Delega la aceptación de la documentación asociada.
      * Corresponde al mensaje recibirYAceptarDocumentacion() en el diagrama de secuencia.
      */
-    public void recibirYAceptarDocumentacion(LocalDateTime fechaHoraActual, Empleado responsable) {
+    public void recibirYAceptarDocumentacion(LocalDateTime fechaHoraActual, String[] responsable) {
         if (this.documentacion != null) {
             this.documentacion.aceptar(fechaHoraActual, responsable);
         }

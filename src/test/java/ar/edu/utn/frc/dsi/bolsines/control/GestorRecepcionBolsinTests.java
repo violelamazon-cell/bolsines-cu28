@@ -92,7 +92,9 @@ class GestorRecepcionBolsinTests {
         assertEquals("Recibido en CM destino", cambioBolsinActual.getEstado().getNombre());
         assertNull(cambioBolsinActual.getFechaHoraFin());
         assertNotNull(cambioBolsinActual.getFechaHoraInicio());
-        assertEquals("Carlos", cambioBolsinActual.getResponsableCE().getNombre());
+        assertNotNull(cambioBolsinActual.getResponsableCE());
+        assertEquals("Carlos", cambioBolsinActual.getResponsableCE()[0]);
+        assertEquals("Gómez", cambioBolsinActual.getResponsableCE()[1]);
 
         for (Remito r : bolsinBd.getRemito()) {
             assertEquals("Recibido y Aceptado", r.getEstado().getNombre(), "Cada remito debe pasar a Recibido y Aceptado");
@@ -110,7 +112,8 @@ class GestorRecepcionBolsinTests {
                 assertNull(cambioDocActual.getFechaHoraFin());
                 assertNotNull(cambioDocActual.getFechaHoraInicio());
                 assertNotNull(cambioDocActual.getResponsableCE());
-                assertEquals("Carlos", cambioDocActual.getResponsableCE().getNombre());
+                assertEquals("Carlos", cambioDocActual.getResponsableCE()[0]);
+                assertEquals("Gómez", cambioDocActual.getResponsableCE()[1]);
 
                 // Historial de la documentación: cambio anterior cerrado con fechaHoraFin
                 List<CambioEstadoDocumentacion> cambiosCerrados = doc.getCambioEstado().stream()

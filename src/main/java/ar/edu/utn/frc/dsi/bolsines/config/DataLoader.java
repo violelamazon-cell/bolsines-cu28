@@ -146,9 +146,9 @@ public class DataLoader implements CommandLineRunner {
         // Contiene 2 remitos y 3 documentaciones en estado EnBolsinEnviado.
         // =====================================================================
         Bolsin b1001 = new Bolsin(1001, 50001, ahora.minusDays(3), 1500.0, cmMza, cmCba);
-        b1001.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(3), ahora.minusDays(2), ebCreado, empMza));
-        b1001.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(2), ahora.minusDays(1), ebCerrado, empMza));
-        b1001.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(1), null, ebEnviado, empMza)); // VIGENTE
+        b1001.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(3), ahora.minusDays(2), ebCreado, empleadoArray(empMza)));
+        b1001.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(2), ahora.minusDays(1), ebCerrado, empleadoArray(empMza)));
+        b1001.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(1), null, ebEnviado, empleadoArray(empMza))); // VIGENTE
 
         // Remito 2001
         Remito r2001 = new Remito(2001, ahora.minusDays(2), cmMza, cmCba, erEnBolsinEnviado);
@@ -171,8 +171,8 @@ public class DataLoader implements CommandLineRunner {
         // Origen: CM Rosario -> Destino: CM Córdoba. Precinto: 50002. Peso: 850g.
         // =====================================================================
         Bolsin b1002 = new Bolsin(1002, 50002, ahora.minusDays(2), 850.0, cmRos, cmCba);
-        b1002.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(2), ahora.minusDays(1), ebCreado, empRos));
-        b1002.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(1), null, ebEnviado, empRos)); // VIGENTE
+        b1002.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(2), ahora.minusDays(1), ebCreado, empleadoArray(empRos)));
+        b1002.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(1), null, ebEnviado, empleadoArray(empRos))); // VIGENTE
 
         Remito r2003 = new Remito(2003, ahora.minusDays(1), cmRos, cmCba, erEnBolsinEnviado);
         Documentacion d3004 = crearDocumentacionConHistorial(3004, "Carta Documento Intimación Rodríguez", ahora.minusDays(3), cmRos, tipoCar, empRos);
@@ -188,8 +188,8 @@ public class DataLoader implements CommandLineRunner {
         // Origen: CM Villa María -> Destino: CM Córdoba. Precinto: 50003. Peso: 2100g.
         // =====================================================================
         Bolsin b1003 = new Bolsin(1003, 50003, ahora.minusDays(2), 2100.0, cmVm, cmCba);
-        b1003.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(2), ahora.minusDays(1), ebCreado, empVm));
-        b1003.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(1), null, ebEnviado, empVm)); // VIGENTE
+        b1003.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(2), ahora.minusDays(1), ebCreado, empleadoArray(empVm)));
+        b1003.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(1), null, ebEnviado, empleadoArray(empVm))); // VIGENTE
 
         Remito r2004 = new Remito(2004, ahora.minusDays(1), cmVm, cmCba, erEnBolsinEnviado);
         Documentacion d3006 = crearDocumentacionConHistorial(3006, "Expediente Fernández s/ Determinación Incapacidad", ahora.minusDays(3), cmVm, tipoExp, empVm);
@@ -211,7 +211,7 @@ public class DataLoader implements CommandLineRunner {
         // BOLSÍN 1004 (Control: Destinado a CM Mendoza, NO debe listarse para Córdoba)
         // =====================================================================
         Bolsin b1004 = new Bolsin(1004, 50004, ahora.minusDays(1), 750.0, cmCba, cmMza);
-        b1004.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(1), null, ebEnviado, empCba));
+        b1004.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(1), null, ebEnviado, empleadoArray(empCba)));
         Remito r2006 = new Remito(2006, ahora.minusDays(1), cmCba, cmMza, erEnBolsinEnviado);
         Documentacion d3010 = crearDocumentacionConHistorial(3010, "Expediente Traslado Mendoza", ahora.minusDays(2), cmCba, tipoExp, empCba);
         r2006.agregarDetalle(new DetalleRemito(d3010, null));
@@ -223,15 +223,15 @@ public class DataLoader implements CommandLineRunner {
         // BOLSÍN 1005 (Control: Ya recibido en CM Córdoba, NO debe listarse como pendiente)
         // =====================================================================
         Bolsin b1005 = new Bolsin(1005, 50005, ahora.minusDays(5), 920.0, cmPar, cmCba);
-        b1005.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(5), ahora.minusDays(4), ebCreado, empCba));
-        b1005.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(4), ahora.minusDays(2), ebEnviado, empCba));
-        b1005.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(2), null, ebRecibido, empCba)); // VIGENTE RECIBIDO
+        b1005.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(5), ahora.minusDays(4), ebCreado, empleadoArray(empCba)));
+        b1005.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(4), ahora.minusDays(2), ebEnviado, empleadoArray(empCba)));
+        b1005.agregarCambioEstado(new CambioEstadoBolsin(ahora.minusDays(2), null, ebRecibido, empleadoArray(empCba))); // VIGENTE RECIBIDO
 
         Remito r2007 = new Remito(2007, ahora.minusDays(4), cmPar, cmCba, erRecibidoYAceptado);
         Documentacion d3011 = new Documentacion(3011, "Expediente Suárez c/ La Segunda ART", ahora.minusDays(6), cmPar, tipoExp, new RecibidaYAceptada());
-        d3011.agregarCambioEstado(new CambioEstadoDocumentacion(ahora.minusDays(6), ahora.minusDays(4), new Registrada(), empCba));
-        d3011.agregarCambioEstado(new CambioEstadoDocumentacion(ahora.minusDays(4), ahora.minusDays(2), new EnBolsinEnviado(), empCba));
-        d3011.agregarCambioEstado(new CambioEstadoDocumentacion(ahora.minusDays(2), null, new RecibidaYAceptada(), empCba)); // VIGENTE RECIBIDA
+        d3011.agregarCambioEstado(new CambioEstadoDocumentacion(ahora.minusDays(6), ahora.minusDays(4), new Registrada(), empleadoArray(empCba)));
+        d3011.agregarCambioEstado(new CambioEstadoDocumentacion(ahora.minusDays(4), ahora.minusDays(2), new EnBolsinEnviado(), empleadoArray(empCba)));
+        d3011.agregarCambioEstado(new CambioEstadoDocumentacion(ahora.minusDays(2), null, new RecibidaYAceptada(), empleadoArray(empCba))); // VIGENTE RECIBIDA
         d3011 = documentacionRepository.save(d3011);
         r2007.agregarDetalle(new DetalleRemito(d3011, null));
         b1005.agregarRemito(r2007);
@@ -248,10 +248,15 @@ public class DataLoader implements CommandLineRunner {
     private Documentacion crearDocumentacionConHistorial(int numero, String asunto, LocalDateTime fechaPase,
                                                         ComisionMedica cmOrigen, TipoDocumento tipo, Empleado resp) {
         Documentacion doc = new Documentacion(numero, asunto, fechaPase, cmOrigen, tipo, new EnBolsinEnviado());
-        doc.agregarCambioEstado(new CambioEstadoDocumentacion(fechaPase, fechaPase.plusDays(1), new Registrada(), resp));
-        doc.agregarCambioEstado(new CambioEstadoDocumentacion(fechaPase.plusDays(1), fechaPase.plusDays(2), new EnRemito(), resp));
-        doc.agregarCambioEstado(new CambioEstadoDocumentacion(fechaPase.plusDays(2), fechaPase.plusDays(3), new EnBolsinSaliente(), resp));
-        doc.agregarCambioEstado(new CambioEstadoDocumentacion(fechaPase.plusDays(3), null, new EnBolsinEnviado(), resp)); // VIGENTE
+        String[] respArray = empleadoArray(resp);
+        doc.agregarCambioEstado(new CambioEstadoDocumentacion(fechaPase, fechaPase.plusDays(1), new Registrada(), respArray));
+        doc.agregarCambioEstado(new CambioEstadoDocumentacion(fechaPase.plusDays(1), fechaPase.plusDays(2), new EnRemito(), respArray));
+        doc.agregarCambioEstado(new CambioEstadoDocumentacion(fechaPase.plusDays(2), fechaPase.plusDays(3), new EnBolsinSaliente(), respArray));
+        doc.agregarCambioEstado(new CambioEstadoDocumentacion(fechaPase.plusDays(3), null, new EnBolsinEnviado(), respArray)); // VIGENTE
         return documentacionRepository.save(doc);
+    }
+
+    private String[] empleadoArray(Empleado e) {
+        return e != null ? new String[]{e.getNombre(), e.getApellido()} : null;
     }
 }

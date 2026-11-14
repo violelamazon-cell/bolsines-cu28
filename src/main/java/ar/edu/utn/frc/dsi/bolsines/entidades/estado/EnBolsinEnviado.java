@@ -2,7 +2,6 @@ package ar.edu.utn.frc.dsi.bolsines.entidades.estado;
 
 import ar.edu.utn.frc.dsi.bolsines.entidades.CambioEstadoDocumentacion;
 import ar.edu.utn.frc.dsi.bolsines.entidades.Documentacion;
-import ar.edu.utn.frc.dsi.bolsines.entidades.Empleado;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,7 +17,7 @@ public class EnBolsinEnviado extends Estado {
     public static final String NOMBRE = "En bolsín enviado";
 
     public EnBolsinEnviado() {
-        super(NOMBRE, "Documentación en tránsito en un bolsín enviado", "Documentacion");
+        super(NOMBRE, "Documentación en tránsito en un bolsín enviado");
     }
 
     /**
@@ -33,7 +32,7 @@ public class EnBolsinEnviado extends Estado {
      * 6. doc.agregarCambioEstado(cambioNuevo)
      */
     @Override
-    public void aceptar(Documentacion doc, LocalDateTime ahora, Empleado resp, List<CambioEstadoDocumentacion> cambios) {
+    public void aceptar(Documentacion doc, LocalDateTime ahora, String[] resp, List<CambioEstadoDocumentacion> cambios) {
         // 1. actual = buscarEstadoActual(cambios)
         CambioEstadoDocumentacion actual = buscarEstadoActual(cambios);
 
@@ -73,8 +72,8 @@ public class EnBolsinEnviado extends Estado {
         return new RecibidaYAceptada();
     }
 
-    private CambioEstadoDocumentacion crearCambioEstado(LocalDateTime ahora, Empleado resp, Estado nuevo) {
-        return new CambioEstadoDocumentacion(ahora, null, nuevo, resp);
+    private CambioEstadoDocumentacion crearCambioEstado(LocalDateTime ahora, String[] resp, Estado nuevo) {
+        return new CambioEstadoDocumentacion(ahora, resp, nuevo);
     }
 }
 
