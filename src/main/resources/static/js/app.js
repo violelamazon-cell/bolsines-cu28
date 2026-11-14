@@ -1,35 +1,123 @@
 /**
  * CU 28 - Registrar recepción de bolsín
- * Frontend - Fase 4, Parte 1
+ * Frontend - Fase 4 (con Login, Homepage y Hash Routing)
  */
 
 (function () {
   'use strict';
 
-  // --- Estado global de la aplicación ---
+  // =========================================================================
+  // Estado global
+  // =========================================================================
   const state = {
-    currentStep: 1,
-    currentEmpleadoId: 1,
+    // Sesión
+    currentEmpleadoId: null,
+    currentNombreCompleto: '',
+    currentPrimerNombre: '',
     currentComisionMedica: '',
+    currentCodigoCm: '',
     empleados: [],
+
+    // Asistente CU 28
+    currentStep: 1,
     listaBolsinesOriginal: [],
     selectedBolsin: null,
-    bolsinDetalle: null,       // respuesta de /seleccionar-bolsin
-    opcionElegida: null,       // número de opción seleccionada en Paso 2
+    bolsinDetalle: null,
+    opcionElegida: null,
     ultimoReintento: null,
     isConfirmingOrCancelling: false,
     seleccionRecepcionRespuesta: null,
     resultadoConfirmacion: null
   };
 
-  // Exponer para depuración/inspección
   window.__appState = state;
 
-  // --- Elementos del DOM ---
+  // =========================================================================
+  // Hash routing
+  // =========================================================================
+
+  const SCREENS = {
+    login: document.getElementById('screen-login'),
+    inicio: document.getElementById('screen-inicio'),
+    recepcion: document.getElementById('screen-recepcion')
+  };
+
+  function getHash() {
+    return window.location.hash.replace('#', '') || 'login';
+  }
+
+  function navigate(hash, pushState = true) {
+    if (pushState) {
+      window.location.hash = hash;
+    }
+    renderScreen(hash);
+  }
+
+  function renderScreen(hash) {
+    // Ocultar todas las pantallas
+    Object.values(SCREENS).forEach(s => {
+      if (s) {
+        s.classList.remove('screen-active');
+        s.setAttribute('hidden', '');
+      }
+    });
+
+    // Guard: si no hay sesión y se intenta ir a inicio o recepcion → login
+    if ((hash === 'inicio' || hash === 'recepcion') && !state.currentEmpleadoId) {
+      hash = 'login';
+    }
+
+    const target = SCREENS[hash] || SCREENS['login'];
+    if (target) {
+      target.removeAttribute('hidden');
+      target.classList.add('screen-active');
+    }
+
+    if (hash === 'inicio') {
+      actualizarHomepage();
+      cargarContadorPendientes();
+    } else if (hash === 'recepcion') {
+      actualizarHeaderRecepcion();
+    }
+  }
+
+  window.addEventListener('hashchange', () => {
+    renderScreen(getHash());
+  });
+
+  // =========================================================================
+  // Elementos del DOM – Login
+  // =========================================================================
+  const loginEl = {
+    cargando: document.getElementById('login-cargando'),
+    error: document.getElementById('login-error'),
+    errorMsg: document.getElementById('login-error-msg'),
+    grid: document.getElementById('login-grid')
+  };
+
+  // =========================================================================
+  // Elementos del DOM – Homepage
+  // =========================================================================
+  const homeEl = {
+    cmBadge: document.getElementById('home-cm-badge'),
+    nombreUsuario: document.getElementById('home-nombre-usuario'),
+    saludo: document.getElementById('home-saludo'),
+    rolCm: document.getElementById('home-rol-cm'),
+    pendientesCount: document.getElementById('home-pendientes-count'),
+    btnComenzarCU28: document.getElementById('btn-comenzar-cu28'),
+    btnCerrarSesion: document.getElementById('btn-cerrar-sesion-home')
+  };
+
+  // =========================================================================
+  // Elementos del DOM – Pantalla Recepción (asistente CU 28)
+  // =========================================================================
   const el = {
-    // Header
+    // Header recepción
     cmBadge: document.getElementById('cm-badge'),
-    selectUsuario: document.getElementById('select-usuario'),
+    recNombreUsuario: document.getElementById('rec-nombre-usuario'),
+    btnCerrarSesionRec: document.getElementById('btn-cerrar-sesion-rec'),
+    btnVolverInicio: document.getElementById('btn-volver-inicio'),
+
     bannerAvisoUsuario: document.getElementById('banner-aviso-usuario'),
 
     // Stepper
@@ -64,7 +152,7 @@
     paso3: document.getElementById('paso-3'),
     paso4: document.getElementById('paso-4'),
 
-    // Paso 2 – Revisión
+    // Paso 2
     p2Resumen: document.getElementById('p2-resumen'),
     p2Cargando: document.getElementById('p2-cargando'),
     p2Error: document.getElementById('p2-error'),
@@ -77,7 +165,7 @@
     btnCancelarP2: document.getElementById('btn-cancelar-p2'),
     btnContinuarP2: document.getElementById('btn-continuar-p2'),
 
-    // Paso 3 – Confirmación (Diálogo modal)
+    // Paso 3
     p3Titulo: document.getElementById('p3-titulo'),
     dialogConfirmacion: document.getElementById('dialog-confirmacion'),
     dialogNumeroBolsin: document.getElementById('dialog-numero-bolsin'),
@@ -89,7 +177,7 @@
     btnNoConfirmar: document.getElementById('btn-no-confirmar'),
     btnConfirmarRecepcion: document.getElementById('btn-confirmar-recepcion'),
 
-    // Paso 4 – Resultado
+    // Paso 4
     p4Titulo: document.getElementById('p4-titulo'),
     p4Subtitulo: document.getElementById('p4-subtitulo'),
     p4VistaExito: document.getElementById('p4-vista-exito'),
@@ -102,19 +190,10 @@
     btnVolverInicioError: document.getElementById('btn-volver-inicio-error')
   };
 
-  // --- Helper de Fetch con cabecera obligatoria X-Empleado-Id ---
-  async function apiFetch(url, options = {}) {
-    const headers = new Headers(options.headers || {});
-    if (!headers.has('Accept')) {
-      headers.set('Accept', 'application/json');
-    }
-    if (state.currentEmpleadoId) {
-      headers.set('X-Empleado-Id', String(state.currentEmpleadoId));
-    }
-    return fetch(url, { ...options, headers });
-  }
+  // =========================================================================
+  // Helpers
+  // =========================================================================
 
-  // --- Helpers de utilidad y extracción de datos ---
   function escapeHtml(str) {
     if (str === null || str === undefined) return '';
     return String(str)
@@ -129,9 +208,7 @@
     if (!obj) return '';
     const cm = obj.nombreCm ?? obj.comisionMedica ?? obj.nombreComisionMedica ?? obj.cm ?? obj.comisionMedicaOrigen;
     if (typeof cm === 'string') return cm;
-    if (cm && typeof cm === 'object') {
-      return cm.nombreCm ?? cm.nombre ?? cm.descripcion ?? '';
-    }
+    if (cm && typeof cm === 'object') return cm.nombreCm ?? cm.nombre ?? cm.descripcion ?? '';
     return '';
   }
 
@@ -139,18 +216,30 @@
     return emp.id ?? emp.empleadoId;
   }
 
-  function extraerEmpleadoNombre(emp) {
-    if (emp.nombreCompleto) return emp.nombreCompleto;
-    if (emp.apellido && emp.nombre) return `${emp.apellido}, ${emp.nombre}`;
-    if (emp.nombre) return emp.nombre;
-    return `Empleado ${extraerEmpleadoId(emp)}`;
+  function extraerPrimerNombre(nombreCompleto) {
+    if (!nombreCompleto) return '';
+    // "Carlos Gómez" → "Carlos"; "Gómez, Carlos" → "Carlos"
+    const partes = nombreCompleto.split(',');
+    if (partes.length > 1) return partes[1].trim().split(' ')[0];
+    return nombreCompleto.trim().split(' ')[0];
   }
 
-  function actualizarCmEnUi(nombreCm) {
-    if (!nombreCm) return;
-    state.currentComisionMedica = nombreCm;
-    if (el.cmBadge) el.cmBadge.textContent = nombreCm;
-    if (el.cmUsuarioSubtitulo) el.cmUsuarioSubtitulo.textContent = nombreCm;
+  function obtenerIniciales(nombreCompleto) {
+    if (!nombreCompleto) return '??';
+    const partes = nombreCompleto.trim().split(/[\s,]+/).filter(Boolean);
+    if (partes.length === 0) return '??';
+    if (partes.length === 1) return partes[0].substring(0, 2).toUpperCase();
+    // "Gómez, Carlos" → ["Gómez","Carlos"] → "CG"
+    // "Carlos Gómez" → ["Carlos","Gómez"] → "CG"
+    return (partes[0][0] + partes[1][0]).toUpperCase();
+  }
+
+  function extraerNombreCompleto(emp) {
+    if (emp.nombreCompleto) return emp.nombreCompleto;
+    if (emp.nombre && emp.apellido) return `${emp.nombre} ${emp.apellido}`;
+    if (emp.apellido && !emp.nombre) return emp.apellido;
+    if (emp.nombre) return emp.nombre;
+    return `Empleado ${extraerEmpleadoId(emp)}`;
   }
 
   function formatearRemitos(cantidad) {
@@ -161,7 +250,199 @@
     return `${cantidad} ${cantidad === 1 ? 'documentación' : 'documentaciones'}`;
   }
 
-  // --- Navegación del Stepper y enfoque accesible ---
+  // =========================================================================
+  // Fetch helper
+  // =========================================================================
+
+  async function apiFetch(url, options = {}) {
+    const headers = new Headers(options.headers || {});
+    if (!headers.has('Accept')) headers.set('Accept', 'application/json');
+    if (state.currentEmpleadoId) headers.set('X-Empleado-Id', String(state.currentEmpleadoId));
+    return fetch(url, { ...options, headers });
+  }
+
+  // =========================================================================
+  // Login
+  // =========================================================================
+
+  async function cargarLogin() {
+    loginEl.cargando.hidden = false;
+    loginEl.error.hidden = true;
+    loginEl.grid.innerHTML = '';
+
+    try {
+      const res = await fetch('/api/sesion/empleados');
+      loginEl.cargando.hidden = true;
+
+      if (!res.ok) throw new Error('Error al cargar empleados');
+      const data = await res.json();
+      const empleados = Array.isArray(data) ? data : (data?.empleados || []);
+      state.empleados = empleados;
+      renderLoginGrid(empleados);
+    } catch (err) {
+      loginEl.cargando.hidden = true;
+      loginEl.error.hidden = false;
+      loginEl.errorMsg.textContent = 'No se pudieron cargar los usuarios. Recargá la página.';
+    }
+  }
+
+  function renderLoginGrid(empleados) {
+    loginEl.grid.innerHTML = '';
+    if (!empleados || empleados.length === 0) {
+      loginEl.error.hidden = false;
+      loginEl.errorMsg.textContent = 'No hay usuarios disponibles.';
+      return;
+    }
+
+    empleados.forEach(emp => {
+      const id = extraerEmpleadoId(emp);
+      const nombre = extraerNombreCompleto(emp);
+      const cm = extraerNombreCm(emp);
+      const iniciales = obtenerIniciales(nombre);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'login-user-card';
+      btn.setAttribute('role', 'listitem');
+      btn.setAttribute('aria-label', `Iniciar sesión como ${nombre}, ${cm}`);
+      btn.dataset.empleadoId = String(id);
+
+      btn.innerHTML = `
+        <span class="login-user-avatar" aria-hidden="true">${escapeHtml(iniciales)}</span>
+        <span class="login-user-info-text">
+          <span class="login-user-nombre">${escapeHtml(nombre)}</span>
+          <span class="login-user-cm">${escapeHtml(cm)}</span>
+        </span>
+      `;
+
+      btn.addEventListener('click', () => iniciarSesion(emp, btn));
+      btn.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); iniciarSesion(emp, btn); }
+      });
+
+      loginEl.grid.appendChild(btn);
+    });
+  }
+
+  async function iniciarSesion(emp, btnEl) {
+    const id = extraerEmpleadoId(emp);
+
+    // Deshabilitar todas las tarjetas mientras procesa
+    loginEl.grid.querySelectorAll('.login-user-card').forEach(c => {
+      c.setAttribute('aria-busy', 'true');
+      c.disabled = true;
+    });
+    if (btnEl) btnEl.classList.add('selected');
+
+    try {
+      const res = await fetch('/api/sesion/iniciar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ empleadoId: id })
+      });
+
+      let sesionData = null;
+      try { sesionData = await res.json(); } catch (_) {}
+
+      // Leer CM de la respuesta de /iniciar o del objeto empleado
+      const cm = extraerNombreCm(sesionData) || extraerNombreCm(emp);
+      const nombre = extraerNombreCompleto(sesionData) || extraerNombreCompleto(emp);
+
+      state.currentEmpleadoId = id;
+      state.currentNombreCompleto = nombre;
+      state.currentPrimerNombre = extraerPrimerNombre(nombre);
+      state.currentComisionMedica = cm;
+
+    } catch (err) {
+      // Si falla el POST, igual permitimos entrar con los datos del empleado
+      state.currentEmpleadoId = id;
+      state.currentNombreCompleto = extraerNombreCompleto(emp);
+      state.currentPrimerNombre = extraerPrimerNombre(state.currentNombreCompleto);
+      state.currentComisionMedica = extraerNombreCm(emp);
+    }
+
+    // Restaurar tarjetas
+    loginEl.grid.querySelectorAll('.login-user-card').forEach(c => {
+      c.removeAttribute('aria-busy');
+      c.disabled = false;
+    });
+
+    navigate('inicio');
+  }
+
+  function cerrarSesion() {
+    state.currentEmpleadoId = null;
+    state.currentNombreCompleto = '';
+    state.currentPrimerNombre = '';
+    state.currentComisionMedica = '';
+    state.currentCodigoCm = '';
+    // Limpiar estado del asistente
+    reiniciarEstadoAsistente();
+    navigate('login');
+  }
+
+  // =========================================================================
+  // Homepage
+  // =========================================================================
+
+  function actualizarHomepage() {
+    if (homeEl.cmBadge) homeEl.cmBadge.textContent = state.currentComisionMedica || '';
+    if (homeEl.nombreUsuario) homeEl.nombreUsuario.textContent = state.currentNombreCompleto || '';
+    if (homeEl.saludo) homeEl.saludo.textContent = `Hola, ${state.currentPrimerNombre || state.currentNombreCompleto}`;
+    if (homeEl.rolCm) homeEl.rolCm.textContent = `Encargado de Bolsines · ${state.currentComisionMedica}`;
+
+    // Foco accesible en el saludo
+    if (homeEl.saludo) {
+      homeEl.saludo.setAttribute('tabindex', '-1');
+      homeEl.saludo.focus();
+    }
+  }
+
+  async function cargarContadorPendientes() {
+    if (!homeEl.pendientesCount) return;
+    homeEl.pendientesCount.textContent = '…';
+
+    try {
+      const res = await apiFetch('/api/recepcion-bolsin/iniciar', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        const bolsines = Array.isArray(data)
+          ? data
+          : (data?.bolsines || data?.bolsinesEnviados || []);
+        state.listaBolsinesOriginal = bolsines;
+        homeEl.pendientesCount.textContent = String(bolsines.length);
+      } else if (res.status === 404) {
+        state.listaBolsinesOriginal = [];
+        homeEl.pendientesCount.textContent = '0';
+      } else {
+        homeEl.pendientesCount.textContent = '—';
+      }
+    } catch (_) {
+      homeEl.pendientesCount.textContent = '—';
+    }
+  }
+
+  // =========================================================================
+  // Recepción – Header
+  // =========================================================================
+
+  function actualizarHeaderRecepcion() {
+    if (el.cmBadge) el.cmBadge.textContent = state.currentComisionMedica || '';
+    if (el.recNombreUsuario) el.recNombreUsuario.textContent = state.currentNombreCompleto || '';
+    if (el.cmUsuarioSubtitulo) el.cmUsuarioSubtitulo.textContent = state.currentComisionMedica || '';
+  }
+
+  function actualizarCmEnUi(nombreCm) {
+    if (!nombreCm) return;
+    state.currentComisionMedica = nombreCm;
+    if (el.cmBadge) el.cmBadge.textContent = nombreCm;
+    if (el.cmUsuarioSubtitulo) el.cmUsuarioSubtitulo.textContent = nombreCm;
+  }
+
+  // =========================================================================
+  // ASISTENTE – Stepper y navegación
+  // =========================================================================
+
   const ETAPAS = [
     { num: 1, name: 'Bolsín' },
     { num: 2, name: 'Revisión' },
@@ -172,7 +453,6 @@
   function goToStep(stepNumber) {
     state.currentStep = stepNumber;
 
-    // Actualizar indicador de pasos
     el.stepperItems.forEach(item => {
       const stepIdx = parseInt(item.dataset.step, 10);
       const badge = item.querySelector('.step-badge');
@@ -197,19 +477,14 @@
       el.compactStepName.textContent = ETAPAS[stepNumber - 1]?.name || '';
     }
 
-    // Gestionar visibilidad de paneles
     [1, 2, 3, 4].forEach(n => {
       const panel = el[`paso${n}`];
       if (panel) {
-        if (n === stepNumber) {
-          panel.removeAttribute('hidden');
-        } else {
-          panel.setAttribute('hidden', '');
-        }
+        if (n === stepNumber) panel.removeAttribute('hidden');
+        else panel.setAttribute('hidden', '');
       }
     });
 
-    // Mover el foco al título del paso correspondiente
     if (stepNumber === 1 && el.pasoTitulo) {
       el.pasoTitulo.focus();
     } else if (stepNumber === 3 && el.p3Titulo) {
@@ -223,11 +498,12 @@
     }
   }
 
-  // --- Manejo de estados visuales de Paso 1 ---
+  // =========================================================================
+  // ASISTENTE – Paso 1: estado visual y tabla
+  // =========================================================================
+
   function setCargando(cargando) {
-    if (el.estadoCargando) {
-      el.estadoCargando.hidden = !cargando;
-    }
+    if (el.estadoCargando) el.estadoCargando.hidden = !cargando;
     if (el.btnBuscar) el.btnBuscar.disabled = cargando;
     if (el.btnLimpiar) el.btnLimpiar.disabled = cargando;
   }
@@ -296,27 +572,13 @@
         </td>
       `;
 
-      // Selección por clic en fila
-      tr.addEventListener('click', () => {
-        seleccionarFila(bolsin, tr);
-      });
-
-      // Selección por teclado (Enter o Espacio)
+      tr.addEventListener('click', () => seleccionarFila(bolsin, tr));
       tr.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          seleccionarFila(bolsin, tr);
-        }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seleccionarFila(bolsin, tr); }
       });
 
-      // Selección explícita por botón
       const btn = tr.querySelector('.btn-seleccionar');
-      if (btn) {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          seleccionarFila(bolsin, tr);
-        });
-      }
+      if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); seleccionarFila(bolsin, tr); });
 
       el.tablaBolsinesBody.appendChild(tr);
     });
@@ -324,20 +586,15 @@
 
   function seleccionarFila(bolsin, trElement) {
     state.selectedBolsin = bolsin;
-    const allRows = el.tablaBolsinesBody.querySelectorAll('tr');
-    allRows.forEach(row => {
+    el.tablaBolsinesBody.querySelectorAll('tr').forEach(row => {
       row.classList.remove('selected');
       row.setAttribute('aria-selected', 'false');
     });
     trElement.classList.add('selected');
     trElement.setAttribute('aria-selected', 'true');
-
-    // Avanzar al Paso 2: seleccionar el bolsín en el backend
-    const numBolsin = bolsin.numeroBolsin ?? bolsin.numero ?? bolsin.id;
-    seleccionarBolsin(numBolsin);
+    seleccionarBolsin(bolsin.numeroBolsin ?? bolsin.numero ?? bolsin.id);
   }
 
-  // --- Carga inicial y filtros ---
   async function cargarBolsinesIniciales(mantenerA6 = false) {
     setCargando(true);
     ocultarBanners(mantenerA6);
@@ -345,22 +602,23 @@
     el.contenedorTabla.hidden = true;
 
     try {
-      const res = await apiFetch('/api/recepcion-bolsin/iniciar', {
-        method: 'POST'
-      });
+      // Si ya tenemos la lista cacheada desde la homepage, la usamos
+      if (state.listaBolsinesOriginal && state.listaBolsinesOriginal.length > 0 && !mantenerA6) {
+        setCargando(false);
+        renderTablaBolsines(state.listaBolsinesOriginal);
+        return;
+      }
 
+      const res = await apiFetch('/api/recepcion-bolsin/iniciar', { method: 'POST' });
       setCargando(false);
 
       if (res.ok) {
         let data = null;
-        try {
-          data = await res.json();
-        } catch (_) {}
+        try { data = await res.json(); } catch (_) {}
         const list = Array.isArray(data) ? data : (data?.bolsines || data?.bolsinesEnviados || []);
         state.listaBolsinesOriginal = list;
         renderTablaBolsines(list);
       } else if (res.status === 404) {
-        // Estado vacío: sin bolsines enviados para la CM
         state.listaBolsinesOriginal = [];
         el.contenedorTabla.hidden = true;
         el.estadoVacio.hidden = false;
@@ -374,15 +632,9 @@
 
   async function buscarBolsines(e) {
     if (e) e.preventDefault();
-
     const precinto = el.filtroPrecinto.value.trim();
     const cmOrigen = el.filtroCmOrigen.value.trim();
-
-    // Si ambos están vacíos, equivale a listar/restaurar todo
-    if (!precinto && !cmOrigen) {
-      limpiarFiltros();
-      return;
-    }
+    if (!precinto && !cmOrigen) { limpiarFiltros(); return; }
 
     setCargando(true);
     ocultarBanners();
@@ -395,32 +647,19 @@
     try {
       const res = await apiFetch(url);
       setCargando(false);
-
       if (res.ok) {
         let data = null;
-        try {
-          data = await res.json();
-        } catch (_) {}
+        try { data = await res.json(); } catch (_) {}
         const bolsines = Array.isArray(data) ? data : (data?.bolsines || data?.bolsinesEnviados || []);
         renderTablaBolsines(bolsines);
         if (el.bannerFiltroError) el.bannerFiltroError.hidden = true;
       } else if (res.status === 404) {
-        // A1/A2: Se muestra banner con el mensaje del servidor y SE MANTIENE la tabla anterior
         let mensaje = 'No se encontró ningún bolsín con el criterio ingresado.';
-        try {
-          const errData = await res.json();
-          if (errData && errData.mensaje) {
-            mensaje = errData.mensaje;
-          }
-        } catch (_) {}
+        try { const e = await res.json(); if (e?.mensaje) mensaje = e.mensaje; } catch (_) {}
         mostrarBannerFiltro(mensaje);
-        // La tabla anterior se mantiene visible; si estaba vacía, el estado vacío se mantiene
       } else {
         let mensaje = 'Ocurrió un problema. Intentá de nuevo en unos segundos.';
-        try {
-          const errData = await res.json();
-          if (errData && errData.mensaje) mensaje = errData.mensaje;
-        } catch (_) {}
+        try { const e = await res.json(); if (e?.mensaje) mensaje = e.mensaje; } catch (_) {}
         mostrarBannerFiltro(mensaje);
       }
     } catch (err) {
@@ -432,7 +671,6 @@
     if (el.filtroPrecinto) el.filtroPrecinto.value = '';
     if (el.filtroCmOrigen) el.filtroCmOrigen.value = '';
     ocultarBanners();
-
     if (state.listaBolsinesOriginal && state.listaBolsinesOriginal.length > 0) {
       renderTablaBolsines(state.listaBolsinesOriginal);
       el.contenedorTabla.hidden = false;
@@ -440,6 +678,16 @@
     } else {
       cargarBolsinesIniciales();
     }
+  }
+
+  function reiniciarEstadoAsistente() {
+    state.currentStep = 1;
+    state.selectedBolsin = null;
+    state.bolsinDetalle = null;
+    state.opcionElegida = null;
+    state.seleccionRecepcionRespuesta = null;
+    state.resultadoConfirmacion = null;
+    state.listaBolsinesOriginal = [];
   }
 
   function reiniciarWizard() {
@@ -452,6 +700,7 @@
     state.opcionElegida = null;
     state.seleccionRecepcionRespuesta = null;
     state.resultadoConfirmacion = null;
+    state.listaBolsinesOriginal = [];
     cargarBolsinesIniciales();
   }
 
@@ -466,143 +715,20 @@
     state.opcionElegida = null;
     state.seleccionRecepcionRespuesta = null;
     state.resultadoConfirmacion = null;
-
-    if (state.listaBolsinesOriginal && state.listaBolsinesOriginal.length > 0) {
-      renderTablaBolsines(state.listaBolsinesOriginal);
-      el.contenedorTabla.hidden = false;
-      el.estadoVacio.hidden = true;
-    } else {
-      cargarBolsinesIniciales(true);
-    }
+    state.listaBolsinesOriginal = [];
+    cargarBolsinesIniciales(true);
   }
 
   async function cancelarProceso() {
-    try {
-      await apiFetch('/api/recepcion-bolsin/cancelar', { method: 'POST' });
-    } catch (_) {}
-    reiniciarWizard();
-  }
-
-  // --- Gestión de sesión y empleados ---
-  async function cargarSesionYEmpleados() {
-    let empleados = [];
-
-    // 1. Cargar lista de empleados
-    try {
-      const res = await apiFetch('/api/sesion/empleados');
-      if (res.ok) {
-        const data = await res.json();
-        empleados = Array.isArray(data) ? data : (data?.empleados || []);
-        poblarSelectorEmpleados(empleados);
-      }
-    } catch (err) {
-      console.warn('No se pudo cargar la lista de empleados:', err);
-    }
-
-    // 2. Cargar sesión activa
-    try {
-      let resSesion = await apiFetch(`/api/sesion?empleadoId=${state.currentEmpleadoId}`);
-      if (!resSesion.ok) {
-        resSesion = await apiFetch('/api/sesion');
-      }
-      if (resSesion.ok) {
-        const sesionData = await resSesion.json();
-        const empId = extraerEmpleadoId(sesionData);
-        if (empId) {
-          state.currentEmpleadoId = empId;
-          if (el.selectUsuario) el.selectUsuario.value = String(empId);
-        }
-        actualizarCmEnUi(extraerNombreCm(sesionData));
-      } else if (empleados.length > 0) {
-        // Fallback al primer empleado de la lista
-        const primerEmp = empleados[0];
-        state.currentEmpleadoId = extraerEmpleadoId(primerEmp);
-        if (el.selectUsuario) el.selectUsuario.value = String(state.currentEmpleadoId);
-        actualizarCmEnUi(extraerNombreCm(primerEmp));
-      }
-    } catch (err) {
-      console.warn('Error al obtener sesión:', err);
-    }
-
-    // 3. Cargar bolsines iniciales
-    cargarBolsinesIniciales();
-  }
-
-  function poblarSelectorEmpleados(empleados) {
-    if (!el.selectUsuario) return;
-    el.selectUsuario.innerHTML = '';
-    state.empleados = empleados || [];
-
-    state.empleados.forEach(emp => {
-      const id = extraerEmpleadoId(emp);
-      const nombre = extraerEmpleadoNombre(emp);
-      const cm = extraerNombreCm(emp);
-      const opt = document.createElement('option');
-      opt.value = String(id);
-      opt.dataset.cm = cm;
-      opt.textContent = cm ? `${nombre} (${cm})` : nombre;
-      el.selectUsuario.appendChild(opt);
-    });
-
-    if (state.currentEmpleadoId) {
-      el.selectUsuario.value = String(state.currentEmpleadoId);
-    }
-  }
-
-  async function onCambiarUsuario(nuevoEmpleadoId) {
-    state.currentEmpleadoId = Number(nuevoEmpleadoId);
-
-    // 1. Obtener CM del empleado elegido desde /api/sesion/empleados
-    let nuevaCm = '';
-    const empElegido = state.empleados.find(e => String(extraerEmpleadoId(e)) === String(state.currentEmpleadoId));
-    if (empElegido) {
-      nuevaCm = extraerNombreCm(empElegido);
-    }
-    if (!nuevaCm && el.selectUsuario) {
-      const opt = el.selectUsuario.options[el.selectUsuario.selectedIndex];
-      if (opt && opt.dataset.cm) {
-        nuevaCm = opt.dataset.cm;
-      }
-    }
-
-    // 2. Notificar al backend sobre el inicio de sesión y leer CM de la respuesta de /api/sesion/iniciar
-    try {
-      const res = await apiFetch('/api/sesion/iniciar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ empleadoId: state.currentEmpleadoId })
-      });
-      if (res.ok) {
-        try {
-          const data = await res.json();
-          const cmFromIniciar = extraerNombreCm(data);
-          if (cmFromIniciar) {
-            nuevaCm = cmFromIniciar;
-          }
-        } catch (_) {}
-      }
-    } catch (_) {}
-
-    // 3. Actualizar CM en chip del header y en el subtítulo del Paso 1
-    if (nuevaCm) {
-      actualizarCmEnUi(nuevaCm);
-    }
-
-    // 4. Mostrar aviso "Cambiaste de usuario. Se reinició el proceso."
-    if (el.bannerAvisoUsuario) {
-      el.bannerAvisoUsuario.hidden = false;
-    }
-
-    // 5. Reiniciar wizard
+    try { await apiFetch('/api/recepcion-bolsin/cancelar', { method: 'POST' }); } catch (_) {}
     reiniciarWizard();
   }
 
   // =========================================================================
-  // PASO 2 – Revisión
+  // ASISTENTE – Paso 2: Revisión
   // =========================================================================
 
   async function seleccionarBolsin(numeroBolsin) {
-    // Ir al paso 2 y mostrar estado cargando
     goToStep(2);
     state.opcionElegida = null;
     state.bolsinDetalle = null;
@@ -626,10 +752,7 @@
 
       if (!res.ok) {
         let msg = 'Ocurrió un problema. Intentá de nuevo en unos segundos.';
-        try {
-          const errData = await res.json();
-          if (errData && errData.mensaje) msg = errData.mensaje;
-        } catch (_) {}
+        try { const e = await res.json(); if (e?.mensaje) msg = e.mensaje; } catch (_) {}
         mostrarErrorP2(msg);
         return;
       }
@@ -637,7 +760,6 @@
       const data = await res.json();
       state.bolsinDetalle = data;
       renderPaso2(data);
-
     } catch (err) {
       el.p2Cargando.hidden = true;
       mostrarErrorP2('Ocurrió un problema. Intentá de nuevo en unos segundos.');
@@ -653,7 +775,6 @@
   }
 
   function renderPaso2(data) {
-    // --- Tarjeta resumen ---
     const remitos = data.remitos || [];
     const totalDocs = remitos.reduce((acc, r) => acc + (r.documentaciones || []).length, 0);
 
@@ -677,14 +798,12 @@
     `;
     el.p2Resumen.hidden = false;
 
-    // --- Remitos con <details> ---
     el.p2RemitosLista.innerHTML = '';
     remitos.forEach((remito, idx) => {
       const docs = remito.documentaciones || [];
       const details = document.createElement('details');
       details.className = 'remito-details';
       if (idx === 0) details.setAttribute('open', '');
-
       details.innerHTML = `
         <summary>Remito N° ${escapeHtml(String(remito.numeroRemito))} · ${formatearDocumentaciones(docs.length)}</summary>
         <div class="remito-tabla-wrapper">
@@ -713,7 +832,6 @@
     });
     el.p2Remitos.hidden = false;
 
-    // --- Opciones de recepción ---
     const opciones = data.opcionesRecepcion || [];
     el.p2OpcionesLista.innerHTML = '';
     state.opcionElegida = null;
@@ -722,7 +840,6 @@
     opciones.forEach(opcion => {
       const wrapper = document.createElement('div');
       wrapper.className = `opcion-card${!opcion.habilitada ? ' disabled' : ''}`;
-
       const inputId = `opcion-${opcion.codigo}`;
       const input = document.createElement('input');
       input.type = 'radio';
@@ -730,14 +847,9 @@
       input.id = inputId;
       input.value = String(opcion.codigo);
       input.disabled = !opcion.habilitada;
-
       input.addEventListener('change', () => {
-        if (input.checked) {
-          state.opcionElegida = opcion.codigo;
-          el.btnContinuarP2.disabled = false;
-        }
+        if (input.checked) { state.opcionElegida = opcion.codigo; el.btnContinuarP2.disabled = false; }
       });
-
       const label = document.createElement('label');
       label.htmlFor = inputId;
       label.innerHTML = `
@@ -745,7 +857,6 @@
         <span class="opcion-descripcion">${escapeHtml(opcion.descripcion)}</span>
         ${!opcion.habilitada ? '<span class="opcion-proximamente">Próximamente</span>' : ''}
       `;
-
       wrapper.appendChild(input);
       wrapper.appendChild(label);
       el.p2OpcionesLista.appendChild(wrapper);
@@ -756,7 +867,6 @@
 
   async function continuarDesdeP2() {
     if (!state.bolsinDetalle || state.opcionElegida === null) return;
-
     el.btnContinuarP2.disabled = true;
     el.btnContinuarP2.setAttribute('aria-busy', 'true');
 
@@ -764,10 +874,7 @@
       const res = await apiFetch('/api/recepcion-bolsin/seleccionar-recepcion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          numeroBolsin: Number(state.bolsinDetalle.numeroBolsin),
-          opcion: Number(state.opcionElegida)
-        })
+        body: JSON.stringify({ numeroBolsin: Number(state.bolsinDetalle.numeroBolsin), opcion: Number(state.opcionElegida) })
       });
 
       el.btnContinuarP2.removeAttribute('aria-busy');
@@ -775,20 +882,15 @@
 
       if (!res.ok) {
         let msg = 'Ocurrió un problema. Intentá de nuevo en unos segundos.';
-        try {
-          const errData = await res.json();
-          if (errData && errData.mensaje) msg = errData.mensaje;
-        } catch (_) {}
+        try { const e = await res.json(); if (e?.mensaje) msg = e.mensaje; } catch (_) {}
         mostrarErrorP2(msg);
         return;
       }
 
       const data = await res.json();
       state.seleccionRecepcionRespuesta = data;
-
       goToStep(3);
       abrirDialogoConfirmacion(data);
-
     } catch (err) {
       el.btnContinuarP2.removeAttribute('aria-busy');
       el.btnContinuarP2.disabled = false;
@@ -797,38 +899,22 @@
   }
 
   // =========================================================================
-  // PASO 3 – Confirmación
+  // ASISTENTE – Paso 3: Confirmación
   // =========================================================================
 
   function abrirDialogoConfirmacion(data) {
     if (!el.dialogConfirmacion || !state.bolsinDetalle) return;
-
     const remitos = state.bolsinDetalle.remitos || [];
     const totalDocs = remitos.reduce((acc, r) => acc + (r.documentaciones || []).length, 0);
 
-    if (el.dialogNumeroBolsin) {
-      el.dialogNumeroBolsin.textContent = String(state.bolsinDetalle.numeroBolsin);
-    }
-    if (el.dialogResumenDocs) {
-      el.dialogResumenDocs.textContent = formatearDocumentaciones(totalDocs);
-    }
-    if (el.dialogResumenRemitos) {
-      el.dialogResumenRemitos.textContent = formatearRemitos(remitos.length);
-    }
-
+    if (el.dialogNumeroBolsin) el.dialogNumeroBolsin.textContent = String(state.bolsinDetalle.numeroBolsin);
+    if (el.dialogResumenDocs) el.dialogResumenDocs.textContent = formatearDocumentaciones(totalDocs);
+    if (el.dialogResumenRemitos) el.dialogResumenRemitos.textContent = formatearRemitos(remitos.length);
     if (el.dialogResumenServidor) {
-      if (data && data.resumen) {
-        el.dialogResumenServidor.textContent = data.resumen;
-        el.dialogResumenServidor.hidden = false;
-      } else {
-        el.dialogResumenServidor.hidden = true;
-      }
+      if (data?.resumen) { el.dialogResumenServidor.textContent = data.resumen; el.dialogResumenServidor.hidden = false; }
+      else el.dialogResumenServidor.hidden = true;
     }
-
-    if (el.dialogError) {
-      el.dialogError.hidden = true;
-    }
-
+    if (el.dialogError) el.dialogError.hidden = true;
     if (el.btnConfirmarRecepcion) {
       el.btnConfirmarRecepcion.disabled = false;
       el.btnConfirmarRecepcion.textContent = 'Confirmar recepción';
@@ -839,52 +925,32 @@
       el.btnNoConfirmar.textContent = 'No confirmar';
       el.btnNoConfirmar.removeAttribute('aria-busy');
     }
-
     state.isConfirmingOrCancelling = false;
-
-    // Abrir diálogo como modal
     el.dialogConfirmacion.showModal();
-
-    // Foco inicial en "No confirmar" (acción segura por defecto)
-    if (el.btnNoConfirmar) {
-      el.btnNoConfirmar.focus();
-    }
+    if (el.btnNoConfirmar) el.btnNoConfirmar.focus();
   }
 
   async function confirmarRecepcion() {
     if (state.isConfirmingOrCancelling || !state.bolsinDetalle) return;
     state.isConfirmingOrCancelling = true;
-
     if (el.btnConfirmarRecepcion) {
       el.btnConfirmarRecepcion.disabled = true;
       el.btnConfirmarRecepcion.setAttribute('aria-busy', 'true');
       el.btnConfirmarRecepcion.textContent = 'Registrando…';
     }
-    if (el.btnNoConfirmar) {
-      el.btnNoConfirmar.disabled = true;
-    }
-    if (el.dialogError) {
-      el.dialogError.hidden = true;
-    }
+    if (el.btnNoConfirmar) el.btnNoConfirmar.disabled = true;
+    if (el.dialogError) el.dialogError.hidden = true;
 
     try {
       const res = await apiFetch('/api/recepcion-bolsin/confirmar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          numeroBolsin: Number(state.bolsinDetalle.numeroBolsin),
-          opcion: Number(state.opcionElegida),
-          confirmado: true
-        })
+        body: JSON.stringify({ numeroBolsin: Number(state.bolsinDetalle.numeroBolsin), opcion: Number(state.opcionElegida), confirmado: true })
       });
 
       if (!res.ok) {
         let msg = 'No se pudo registrar la recepción. No se modificó ningún dato.';
-        try {
-          const errData = await res.json();
-          if (errData && errData.mensaje) msg = errData.mensaje;
-        } catch (_) {}
-
+        try { const e = await res.json(); if (e?.mensaje) msg = e.mensaje; } catch (_) {}
         el.dialogConfirmacion.close();
         state.isConfirmingOrCancelling = false;
         renderPaso4Error(msg);
@@ -893,14 +959,12 @@
 
       const data = await res.json();
       state.resultadoConfirmacion = data;
-
+      // Forzar recarga del contador al volver al inicio
+      state.listaBolsinesOriginal = [];
       el.dialogConfirmacion.close();
       state.isConfirmingOrCancelling = false;
-
-      // Avanzar al Paso 4
       renderPaso4(data);
       goToStep(4);
-
     } catch (err) {
       el.dialogConfirmacion.close();
       state.isConfirmingOrCancelling = false;
@@ -911,7 +975,6 @@
   async function noConfirmarRecepcion() {
     if (state.isConfirmingOrCancelling || !state.bolsinDetalle) return;
     state.isConfirmingOrCancelling = true;
-
     if (el.btnConfirmarRecepcion) el.btnConfirmarRecepcion.disabled = true;
     if (el.btnNoConfirmar) el.btnNoConfirmar.disabled = true;
 
@@ -919,24 +982,12 @@
       const res = await apiFetch('/api/recepcion-bolsin/confirmar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          numeroBolsin: Number(state.bolsinDetalle.numeroBolsin),
-          opcion: Number(state.opcionElegida),
-          confirmado: false
-        })
+        body: JSON.stringify({ numeroBolsin: Number(state.bolsinDetalle.numeroBolsin), opcion: Number(state.opcionElegida), confirmado: false })
       });
-
       let mensaje = 'No se registró la recepción. No se modificó ningún dato.';
-      if (res.ok) {
-        try {
-          const data = await res.json();
-          if (data && data.mensaje) mensaje = data.mensaje;
-        } catch (_) {}
-      }
-
+      if (res.ok) { try { const d = await res.json(); if (d?.mensaje) mensaje = d.mensaje; } catch (_) {} }
       el.dialogConfirmacion.close();
       volverPaso1ConA6(mensaje);
-
     } catch (err) {
       el.dialogConfirmacion.close();
       volverPaso1ConA6('No se registró la recepción. No se modificó ningún dato.');
@@ -946,19 +997,15 @@
   }
 
   // =========================================================================
-  // PASO 4 – Resultado
+  // ASISTENTE – Paso 4: Resultado
   // =========================================================================
 
   function renderPaso4(resultado) {
     if (el.p4VistaExito) el.p4VistaExito.hidden = false;
     if (el.p4VistaError) el.p4VistaError.hidden = true;
-
-    if (el.p4Subtitulo && resultado.mensaje) {
-      el.p4Subtitulo.textContent = resultado.mensaje;
-    }
+    if (el.p4Subtitulo && resultado.mensaje) el.p4Subtitulo.textContent = resultado.mensaje;
 
     const numBolsin = resultado.numeroBolsin ?? state.bolsinDetalle?.numeroBolsin ?? '-';
-    // Nombre del estado del modelo (State) tal como lo devuelve el backend, sin textos inventados
     const nuevoEstado = resultado.nuevoEstadoBolsin ?? '';
     const remitos = resultado.remitosActualizados ?? 0;
     const docs = resultado.documentacionesActualizadas ?? 0;
@@ -987,9 +1034,7 @@
     if (el.p4NotificacionesLista) {
       const notifs = resultado.notificaciones || [];
       if (notifs.length === 0) {
-        el.p4NotificacionesLista.innerHTML = `
-          <p class="notificaciones-vacias text-muted">No se enviaron notificaciones.</p>
-        `;
+        el.p4NotificacionesLista.innerHTML = `<p class="notificaciones-vacias text-muted">No se enviaron notificaciones.</p>`;
       } else {
         el.p4NotificacionesLista.innerHTML = notifs.map(n => `
           <div class="notificacion-item">
@@ -1010,99 +1055,127 @@
   function renderPaso4Error(mensaje) {
     if (el.p4VistaExito) el.p4VistaExito.hidden = true;
     if (el.p4VistaError) el.p4VistaError.hidden = false;
-    if (el.p4ErrorMensajeTexto) {
-      el.p4ErrorMensajeTexto.textContent = mensaje || 'No se pudo registrar la recepción. No se modificó ningún dato.';
-    }
+    if (el.p4ErrorMensajeTexto) el.p4ErrorMensajeTexto.textContent = mensaje || 'No se pudo registrar la recepción. No se modificó ningún dato.';
     goToStep(4);
   }
 
-  // --- Registro de Event Listeners ---
+  // =========================================================================
+  // Inicio del asistente: ir a pantalla recepción desde homepage
+  // =========================================================================
+
+  function comenzarCU28() {
+    // Limpia el estado del wizard y fuerza recarga de bolsines
+    reiniciarEstadoAsistente();
+    navigate('recepcion');
+    // Después de navegar, inicializa el wizard desde paso 1
+    requestAnimationFrame(() => {
+      actualizarHeaderRecepcion();
+      goToStep(1);
+      cargarBolsinesIniciales();
+    });
+  }
+
+  // =========================================================================
+  // Registro de Event Listeners
+  // =========================================================================
+
   function inicializarEventos() {
-    if (el.selectUsuario) {
-      el.selectUsuario.addEventListener('change', (e) => {
-        onCambiarUsuario(e.target.value);
-      });
-    }
+    // --- Login ---
+    // (las tarjetas se crean dinámicamente con addEventListener en renderLoginGrid)
 
-    if (el.formFiltros) {
-      el.formFiltros.addEventListener('submit', buscarBolsines);
-    }
+    // --- Homepage ---
+    if (homeEl.btnComenzarCU28) homeEl.btnComenzarCU28.addEventListener('click', comenzarCU28);
+    if (homeEl.btnCerrarSesion) homeEl.btnCerrarSesion.addEventListener('click', cerrarSesion);
 
-    if (el.btnLimpiar) {
-      el.btnLimpiar.addEventListener('click', limpiarFiltros);
-    }
+    // --- Header de Recepción ---
+    if (el.btnCerrarSesionRec) el.btnCerrarSesionRec.addEventListener('click', () => {
+      cerrarSesion();
+    });
+    if (el.btnVolverInicio) el.btnVolverInicio.addEventListener('click', () => {
+      navigate('inicio');
+    });
 
+    // --- Paso 1 ---
+    if (el.formFiltros) el.formFiltros.addEventListener('submit', buscarBolsines);
+    if (el.btnLimpiar) el.btnLimpiar.addEventListener('click', limpiarFiltros);
     if (el.btnReintentar) {
       el.btnReintentar.addEventListener('click', () => {
-        if (typeof state.ultimoReintento === 'function') {
-          state.ultimoReintento();
-        } else {
-          cargarBolsinesIniciales();
-        }
+        if (typeof state.ultimoReintento === 'function') state.ultimoReintento();
+        else cargarBolsinesIniciales();
       });
     }
+    if (el.btnCancelarPaso1) el.btnCancelarPaso1.addEventListener('click', cancelarProceso);
 
-    if (el.btnCancelarPaso1) {
-      el.btnCancelarPaso1.addEventListener('click', cancelarProceso);
-    }
+    // --- Paso 2 ---
+    if (el.btnVolverP2) el.btnVolverP2.addEventListener('click', () => goToStep(1));
+    if (el.btnCancelarP2) el.btnCancelarP2.addEventListener('click', cancelarProceso);
+    if (el.btnContinuarP2) el.btnContinuarP2.addEventListener('click', continuarDesdeP2);
 
-    // Paso 2
-    if (el.btnVolverP2) {
-      el.btnVolverP2.addEventListener('click', () => {
-        goToStep(1);
-      });
-    }
-
-    if (el.btnCancelarP2) {
-      el.btnCancelarP2.addEventListener('click', cancelarProceso);
-    }
-
-    if (el.btnContinuarP2) {
-      el.btnContinuarP2.addEventListener('click', continuarDesdeP2);
-    }
-
-    // Paso 3 – Confirmación
+    // --- Paso 3: Diálogo ---
     if (el.dialogConfirmacion) {
-      // Esc = no confirmar
-      el.dialogConfirmacion.addEventListener('cancel', (e) => {
-        e.preventDefault();
-        noConfirmarRecepcion();
-      });
+      el.dialogConfirmacion.addEventListener('cancel', (e) => { e.preventDefault(); noConfirmarRecepcion(); });
     }
+    if (el.btnNoConfirmar) el.btnNoConfirmar.addEventListener('click', (e) => { e.preventDefault(); noConfirmarRecepcion(); });
+    if (el.btnConfirmarRecepcion) el.btnConfirmarRecepcion.addEventListener('click', (e) => { e.preventDefault(); confirmarRecepcion(); });
 
-    if (el.btnNoConfirmar) {
-      el.btnNoConfirmar.addEventListener('click', (e) => {
-        e.preventDefault();
-        noConfirmarRecepcion();
-      });
-    }
-
-    if (el.btnConfirmarRecepcion) {
-      el.btnConfirmarRecepcion.addEventListener('click', (e) => {
-        e.preventDefault();
-        confirmarRecepcion();
-      });
-    }
-
-    // Paso 4 – Resultado
+    // --- Paso 4 ---
     if (el.btnReiniciarDesdeP4) {
       el.btnReiniciarDesdeP4.addEventListener('click', () => {
-        reiniciarWizard();
+        // Reinicia wizard y vuelve al inicio para mostrar el nuevo contador
+        reiniciarEstadoAsistente();
+        navigate('inicio');
       });
     }
-
     if (el.btnVolverInicioError) {
       el.btnVolverInicioError.addEventListener('click', () => {
-        reiniciarWizard();
+        reiniciarEstadoAsistente();
+        navigate('inicio');
       });
     }
   }
 
-  // --- Inicio de la aplicación ---
-  document.addEventListener('DOMContentLoaded', () => {
-    inicializarEventos();
-    goToStep(1);
-    cargarSesionYEmpleados();
-  });
-})();
+  // =========================================================================
+  // Arranque
+  // =========================================================================
 
+  async function inicializar() {
+    inicializarEventos();
+
+    // Intentar recuperar la sesión activa al cargar
+    try {
+      const res = await fetch('/api/sesion?empleadoId=1', { headers: { Accept: 'application/json' } });
+      if (res.ok) {
+        const data = await res.json();
+        const id = data.id ?? data.empleadoId;
+        if (id) {
+          state.currentEmpleadoId = id;
+          state.currentNombreCompleto = data.nombreCompleto || `Empleado ${id}`;
+          state.currentPrimerNombre = extraerPrimerNombre(state.currentNombreCompleto);
+          state.currentComisionMedica = extraerNombreCm(data) || data.cm || '';
+        }
+      }
+    } catch (_) {}
+
+    // Cargar lista de empleados (necesaria para renderizar el login)
+    try {
+      const res = await fetch('/api/sesion/empleados', { headers: { Accept: 'application/json' } });
+      if (res.ok) {
+        const data = await res.json();
+        state.empleados = Array.isArray(data) ? data : (data?.empleados || []);
+      }
+    } catch (_) {}
+
+    // Hash routing: determinar pantalla inicial
+    const hash = getHash();
+
+    if (hash === 'login' || !state.currentEmpleadoId) {
+      await cargarLogin();
+      navigate('login', false);
+    } else {
+      navigate(hash, false);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', inicializar);
+
+})();

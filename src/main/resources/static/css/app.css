@@ -2,6 +2,694 @@
    Tokens de diseño (Sección 3.1 - Especificación UX/UI CU 28)
    ========================================================================== */
 
+/* ==========================================================================
+   Pantallas / routing hash
+   ========================================================================== */
+
+.screen {
+  display: none;
+}
+.screen.screen-active {
+  display: block;
+}
+/* Login usa flex, homepage y recepcion usan block por defecto */
+#screen-login.screen-active {
+  display: flex;
+  min-height: 100vh;
+  align-items: flex-start;
+  justify-content: center;
+  background: linear-gradient(145deg, #E8F1FA 0%, #F4F6F9 60%, #EAF0F8 100%);
+  padding: 2rem 1rem;
+}
+
+/* ==========================================================================
+   Login
+   ========================================================================== */
+
+.login-wrapper {
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  text-align: left;
+}
+
+.login-logo-svg {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+}
+
+.login-logo-name {
+  display: block;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0B5CAD;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.login-logo-sub {
+  font-size: 0.9rem;
+  color: #5A6675;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.login-card {
+  width: 100%;
+  background: #FFFFFF;
+  border: 1px solid #D5DBE3;
+  border-radius: 1rem;
+  padding: 2.25rem 2rem 1.75rem;
+  box-shadow: 0 4px 24px rgba(11, 92, 173, 0.08);
+}
+
+.login-titulo {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1B2430;
+  text-align: center;
+  margin-bottom: 0.35rem;
+}
+
+.login-subtitulo {
+  text-align: center;
+  color: #5A6675;
+  font-size: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+/* Grid de tarjetas: 3 col en notebook, lista en móvil */
+.login-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Tarjeta de usuario — notebook */
+.login-user-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.35rem 1rem 1.15rem;
+  border: 2px solid #D5DBE3;
+  border-radius: 0.75rem;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  text-align: center;
+  font: inherit;
+  color: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.login-user-card:hover,
+.login-user-card:focus-visible {
+  border-color: #0B5CAD;
+  box-shadow: 0 0 0 3px rgba(11, 92, 173, 0.18);
+  outline: none;
+}
+
+.login-user-card:active {
+  transform: scale(0.98);
+}
+
+.login-user-card.selected {
+  border-color: #0B5CAD;
+  background: #E8F1FA;
+}
+
+/* Avatar con iniciales */
+.login-user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: #E8F1FA;
+  color: #0B5CAD;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  border: 2px solid rgba(11, 92, 173, 0.2);
+}
+
+.login-user-nombre {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1B2430;
+  line-height: 1.25;
+}
+
+.login-user-cm {
+  font-size: 0.82rem;
+  color: #5A6675;
+  line-height: 1.3;
+}
+
+/* Versión lista (móvil < 600px) */
+@media (max-width: 599px) {
+  .login-grid {
+    grid-template-columns: 1fr;
+  }
+  .login-user-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem 1rem;
+    text-align: left;
+  }
+  .login-user-card::after {
+    content: '›';
+    margin-left: auto;
+    font-size: 1.3rem;
+    color: #5A6675;
+    line-height: 1;
+  }
+  .login-user-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.85rem;
+  }
+  .login-user-nombre,
+  .login-user-cm {
+    text-align: left;
+  }
+}
+
+/* Aviso amarillo */
+.login-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background: #FFF4DB;
+  border: 1px solid rgba(138, 90, 0, 0.25);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #8A5A00;
+  line-height: 1.4;
+}
+
+.login-aviso-icon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+/* Estado cargando login (reutiliza .loading-container) */
+
+/* ==========================================================================
+   Homepage header azul
+   ========================================================================== */
+
+.home-header {
+  background-color: #0B5CAD;
+  padding: 0 1.25rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.home-header-container {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 56px;
+}
+
+.home-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.home-logo-svg {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.home-logo-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+}
+
+.home-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.home-cm-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  background: rgba(255,255,255,0.18);
+  color: #FFFFFF;
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.home-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.92);
+  font-size: 0.92rem;
+}
+
+.home-user-icon {
+  opacity: 0.9;
+}
+
+.home-user-name {
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.home-header-sep {
+  color: rgba(255,255,255,0.4);
+  font-size: 0.9rem;
+  user-select: none;
+}
+
+.home-btn-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 0.4rem;
+  color: rgba(255,255,255,0.92);
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  min-height: 32px;
+  white-space: nowrap;
+}
+
+.home-btn-logout:hover,
+.home-btn-logout:focus-visible {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.7);
+  outline: 2px solid rgba(255,255,255,0.5);
+  outline-offset: 1px;
+}
+
+@media (max-width: 600px) {
+  .home-header {
+    padding: 0 1rem;
+  }
+  .home-user-info {
+    display: none; /* en móvil solo el badge y botón */
+  }
+  .home-header-sep {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   Homepage main
+   ========================================================================== */
+
+.container-home {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.75rem 1.25rem 3rem;
+}
+
+.home-saludo-bloque {
+  margin-bottom: 1.5rem;
+}
+
+.home-saludo {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1B2430;
+  margin-bottom: 0.2rem;
+}
+
+.home-saludo:focus {
+  outline: none;
+}
+
+.home-rol-cm {
+  font-size: 0.95rem;
+  color: #5A6675;
+  margin: 0;
+}
+
+/* Tarjeta principal */
+.home-card {
+  background: #FFFFFF;
+  border: 1px solid #D5DBE3;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.home-card-principal {
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 1.1rem 1.5rem;
+  align-items: center;
+}
+
+.home-card-principal-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.home-card-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 0.75rem;
+  background: #E8F1FA;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.home-card-titulo {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1B2430;
+  margin: 0 0 0.25rem;
+  line-height: 1.25;
+}
+
+.home-card-descripcion {
+  font-size: 0.875rem;
+  color: #5A6675;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.btn-comenzar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #0B5CAD;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.65rem 1.3rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  min-height: 44px;
+  white-space: nowrap;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+
+.btn-comenzar:hover,
+.btn-comenzar:focus-visible {
+  background: #084A8C;
+  outline: 2px solid #0B5CAD;
+  outline-offset: 2px;
+}
+
+/* Stepper preview en la tarjeta principal */
+.home-stepper {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid #D5DBE3;
+}
+
+.home-step {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.home-step-label {
+  font-size: 0.8rem;
+  color: #A0AEC0;
+  font-weight: 500;
+}
+
+.home-step-active .home-step-label {
+  color: #F2B705;
+  font-weight: 700;
+}
+
+.home-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: #E2E8F0;
+  color: #A0AEC0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.home-step-badge-accent {
+  background: #F2B705;
+  color: #1B2430;
+}
+
+.home-step-line {
+  flex: 1;
+  height: 2px;
+  background: #E2E8F0;
+  margin: 0 0.5rem;
+  min-width: 20px;
+}
+
+@media (max-width: 599px) {
+  .home-card-principal {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+  .btn-comenzar {
+    grid-column: 1;
+    grid-row: 2;
+    width: 100%;
+    justify-content: center;
+  }
+  .home-stepper {
+    grid-row: 3;
+  }
+  .home-step-label {
+    display: none;
+  }
+  .home-step-line {
+    min-width: 12px;
+  }
+}
+
+/* Tarjetas secundarias deshabilitadas */
+.home-cards-secondary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.home-card-disabled {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.home-card-disabled-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #5A6675;
+}
+
+.home-card-disabled-titulo {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #5A6675;
+}
+
+.home-badge-proximamente {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #5A6675;
+  background: #E2E8F0;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 599px) {
+  .home-cards-secondary {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tarjeta pendientes */
+.home-card-pendientes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.5rem;
+}
+
+.home-pendientes-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.home-pendientes-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 0.6rem;
+  background: #E6F4EC;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.home-pendientes-texto {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1B2430;
+  line-height: 1.35;
+}
+
+.home-pendientes-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  border-radius: 50%;
+  background: #E6F4EC;
+  color: #1E7F4F;
+  font-size: 1.3rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  padding: 0 0.4rem;
+}
+
+@media (max-width: 599px) {
+  .home-card-pendientes {
+    padding: 1rem;
+  }
+  .home-pendientes-texto {
+    font-size: 0.875rem;
+  }
+}
+
+/* ==========================================================================
+   Pantalla de Recepción — header modificado
+   ========================================================================== */
+
+.app-header-icon {
+  flex-shrink: 0;
+}
+
+.rec-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.rec-usuario-nombre {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1B2430;
+}
+
+.btn-link-discreto {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  color: #5A6675;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.35rem;
+  transition: color 0.15s, background 0.15s;
+  text-decoration: none;
+  min-height: 36px;
+}
+
+.btn-link-discreto:hover,
+.btn-link-discreto:focus-visible {
+  color: #0B5CAD;
+  background: #E8F1FA;
+  outline: 2px solid #0B5CAD;
+  outline-offset: 1px;
+}
+
+@media (max-width: 599px) {
+  .rec-header-right {
+    gap: 0.35rem;
+  }
+  .rec-usuario-nombre {
+    display: none;
+  }
+}
+
+/* Estado de procesamiento en login */
+.login-user-card[aria-busy="true"] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   btn-primary utilitario (complementa a Pico)
+   ========================================================================== */
+
+
 :root {
   /* Marca */
   --pico-primary: #0B5CAD;
