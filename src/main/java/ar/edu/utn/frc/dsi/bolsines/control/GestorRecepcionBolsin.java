@@ -37,17 +37,20 @@ public class GestorRecepcionBolsin {
     private final EmpleadoRepository empleadoRepository;
     private final EstadoBolsinRepository estadoBolsinRepository;
     private final EstadoRemitoRepository estadoRemitoRepository;
+    private final ComisionMedicaRepository comisionMedicaRepository;
     private final NotificadorEmail notificadorEmail;
 
     public GestorRecepcionBolsin(BolsinRepository bolsinRepository,
                                   EmpleadoRepository empleadoRepository,
                                   EstadoBolsinRepository estadoBolsinRepository,
                                   EstadoRemitoRepository estadoRemitoRepository,
+                                  ComisionMedicaRepository comisionMedicaRepository,
                                   NotificadorEmail notificadorEmail) {
         this.bolsinRepository = bolsinRepository;
         this.empleadoRepository = empleadoRepository;
         this.estadoBolsinRepository = estadoBolsinRepository;
         this.estadoRemitoRepository = estadoRemitoRepository;
+        this.comisionMedicaRepository = comisionMedicaRepository;
         this.notificadorEmail = notificadorEmail;
     }
 
@@ -449,6 +452,18 @@ public class GestorRecepcionBolsin {
                 emp.getCM().getNombre(),
                 emp.getCM().getCodigo()
             ))
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Lista los nombres de todas las Comisiones Médicas, ordenados alfabéticamente.
+     * Se usa para poblar el desplegable de filtro de CM origen en el Paso 1.
+     */
+    @Transactional(readOnly = true)
+    public List<ComisionMedicaDto> listarComisionesMedicas() {
+        return comisionMedicaRepository.findAll().stream()
+            .map(cm -> new ComisionMedicaDto(cm.getNombre()))
+            .sorted(Comparator.comparing(ComisionMedicaDto::nombre))
             .collect(Collectors.toList());
     }
 

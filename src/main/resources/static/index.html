@@ -280,8 +280,10 @@
             <input type="text" id="filtro-precinto" name="numeroPrecinto" placeholder="N° de precinto" autocomplete="off">
           </div>
           <div class="filtro-field">
-            <label for="filtro-cm-origen">Comisión médica de origen</label>
-            <input type="text" id="filtro-cm-origen" name="cmOrigen" placeholder="Comisión médica de origen" autocomplete="off">
+            <label for="filtro-cm-origen">CM de origen</label>
+            <select id="filtro-cm-origen" name="cmOrigen">
+              <option value="">Todas las comisiones</option>
+            </select>
           </div>
           <div class="filtro-actions">
             <button type="submit" id="btn-buscar" class="btn-primary">Buscar</button>

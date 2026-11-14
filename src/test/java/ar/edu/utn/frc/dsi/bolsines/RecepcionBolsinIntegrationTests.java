@@ -288,5 +288,29 @@ class RecepcionBolsinIntegrationTests {
                         .header("X-Empleado-Id", EMP_CORDOBA))
                 .andExpect(status().isNoContent());
     }
+
+    // =========================================================================
+    // GET /api/comisiones-medicas
+    // =========================================================================
+
+    @Test
+    @DisplayName("GET /api/comisiones-medicas -> lista no vacía, ordenada, con campo nombre")
+    void listarComisionesMedicas_retornaListaOrdenada() throws Exception {
+        mockMvc.perform(get("/api/comisiones-medicas"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(2))))
+                .andExpect(jsonPath("$[0].nombre").isNotEmpty())
+                // Verifica orden alfabético: el primer nombre <= el segundo
+                .andExpect(result -> {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    var list = mapper.readTree(result.getResponse().getContentAsString());
+                    String primero = list.get(0).get("nombre").asText();
+                    String segundo = list.get(1).get("nombre").asText();
+                    org.junit.jupiter.api.Assertions.assertTrue(
+                        primero.compareToIgnoreCase(segundo) <= 0,
+                        "Las comisiones médicas no están ordenadas alfabéticamente: '" + primero + "' > '" + segundo + "'"
+                    );
+                });
+    }
 }
 
