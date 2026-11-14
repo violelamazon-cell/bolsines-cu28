@@ -78,7 +78,7 @@ public class CambioEstadoDocumentacion {
     // Métodos del dominio / Patrón Experto (diagramas E1 y E2)
     // =========================================================================
 
-    public boolean esActual() {
+    public boolean esEstadoActual() {
         return this.fechaHoraFin == null;
     }
 

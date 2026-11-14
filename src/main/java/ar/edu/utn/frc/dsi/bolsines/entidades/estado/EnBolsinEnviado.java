@@ -62,7 +62,7 @@ public class EnBolsinEnviado extends Estado {
     private CambioEstadoDocumentacion buscarEstadoActual(List<CambioEstadoDocumentacion> cambios) {
         if (cambios == null) return null;
         for (CambioEstadoDocumentacion c : cambios) {
-            if (c.esActual()) {
+            if (c.esEstadoActual()) {
                 return c;
             }
         }

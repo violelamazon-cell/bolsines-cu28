@@ -103,7 +103,7 @@ class GestorRecepcionBolsinTests {
 
                 // Historial de la documentación: cambio actual
                 CambioEstadoDocumentacion cambioDocActual = doc.getCambioEstado().stream()
-                        .filter(CambioEstadoDocumentacion::esActual)
+                        .filter(CambioEstadoDocumentacion::esEstadoActual)
                         .findFirst()
                         .orElseThrow();
                 assertEquals("Recibida y aceptada", cambioDocActual.getEstado().getNombre());
@@ -114,7 +114,7 @@ class GestorRecepcionBolsinTests {
 
                 // Historial de la documentación: cambio anterior cerrado con fechaHoraFin
                 List<CambioEstadoDocumentacion> cambiosCerrados = doc.getCambioEstado().stream()
-                        .filter(c -> !c.esActual())
+                        .filter(c -> !c.esEstadoActual())
                         .toList();
                 assertFalse(cambiosCerrados.isEmpty(), "Debe existir al menos un cambio cerrado");
                 CambioEstadoDocumentacion cambioAnterior = cambiosCerrados.get(cambiosCerrados.size() - 1);

@@ -34,7 +34,7 @@ class DominioPuroTests {
         CambioEstadoDocumentacion cambioPrevio = new CambioEstadoDocumentacion(ahora.minusDays(1), null, new EnBolsinEnviado(), respEnvio);
         doc.agregarCambioEstado(cambioPrevio);
 
-        assertTrue(cambioPrevio.esActual(), "El cambio previo debe ser actual antes de la transición");
+        assertTrue(cambioPrevio.esEstadoActual(), "El cambio previo debe ser actual antes de la transición");
         assertEquals(EnBolsinEnviado.NOMBRE, doc.getEstado().getNombre());
 
         // EJECUCIÓN: CU 28 Paso 11c
@@ -45,14 +45,14 @@ class DominioPuroTests {
         assertEquals(RecibidaYAceptada.NOMBRE, doc.getEstado().getNombre());
 
         // 2. El cambio anterior debe haber sido cerrado con fechaHoraFin = ahora
-        assertFalse(cambioPrevio.esActual(), "El cambio anterior ya no debe ser actual");
+        assertFalse(cambioPrevio.esEstadoActual(), "El cambio anterior ya no debe ser actual");
         assertEquals(ahora, cambioPrevio.getFechaHoraFin(), "La fechaHoraFin del cambio previo debe ser 'ahora'");
 
         // 3. Se debe haber agregado un nuevo CambioEstadoDocumentacion al historial
         assertEquals(2, doc.getCambioEstado().size(), "El historial debe contener 2 cambios");
         CambioEstadoDocumentacion cambioNuevo = doc.getCambioEstado().get(1);
 
-        assertTrue(cambioNuevo.esActual(), "El nuevo cambio debe ser el vigente (fechaHoraFin == null)");
+        assertTrue(cambioNuevo.esEstadoActual(), "El nuevo cambio debe ser el vigente (fechaHoraFin == null)");
         assertNull(cambioNuevo.getFechaHoraFin());
         assertEquals(ahora, cambioNuevo.getFechaHoraInicio());
         assertEquals(respRecepcion, cambioNuevo.getResponsableCE(), "El responsable debe ser el empleado que recibió");
