@@ -90,6 +90,12 @@
         <span id="banner-filtro-mensaje"></span>
       </div>
 
+      <!-- Banner A6 (No confirmar recepción) -->
+      <div id="banner-a6" class="banner banner-warning" role="status" aria-live="polite" hidden>
+        <span class="banner-icon" aria-hidden="true">⚠</span>
+        <span id="banner-a6-mensaje">No se registró la recepción. No se modificó ningún dato.</span>
+      </div>
+
       <!-- Banner de error de conexión con Reintentar -->
       <div id="banner-error-conexion" class="banner banner-danger" role="alert" hidden>
         <div class="banner-message">
@@ -178,9 +184,57 @@
       </footer>
     </section>
 
-    <!-- Pasos 3 y 4 como contenedores vacíos para la próxima parte -->
-    <section id="paso-3" class="step-panel" hidden></section>
-    <section id="paso-4" class="step-panel" hidden></section>
+    <!-- Paso 3: Confirmación -->
+    <section id="paso-3" class="step-panel" hidden aria-labelledby="p3-titulo">
+      <header class="step-header">
+        <h1 id="p3-titulo" class="paso-titulo" tabindex="-1">Confirmación</h1>
+        <p class="paso-subtitulo">Revisá el resumen y confirmá la recepción del bolsín.</p>
+      </header>
+      <div id="p3-resumen-espera" class="bolsin-resumen-card">
+        <div class="resumen-campo">
+          <span class="resumen-label">Estado</span>
+          <span class="resumen-valor">Esperando confirmación en el diálogo modal</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Paso 4: Resultado (Placeholder) -->
+    <section id="paso-4" class="step-panel" hidden aria-labelledby="p4-titulo">
+      <header class="step-header">
+        <h1 id="p4-titulo" class="paso-titulo" tabindex="-1">Recepción registrada</h1>
+        <p class="paso-subtitulo">Paso 4 · Resultado</p>
+      </header>
+      <article class="card">
+        <p><strong>✔ Recepción registrada con éxito.</strong></p>
+        <div id="p4-resultado-detalle"></div>
+      </article>
+      <footer class="step-footer">
+        <button type="button" id="btn-reiniciar-desde-p4" class="btn-primary">Registrar otra recepción</button>
+      </footer>
+    </section>
+
+    <!-- Diálogo modal de confirmación (Paso 3) -->
+    <dialog id="dialog-confirmacion" aria-labelledby="dialog-titulo" aria-describedby="dialog-descripcion">
+      <article>
+        <header>
+          <h2 id="dialog-titulo">Confirmar recepción</h2>
+        </header>
+        <p id="dialog-descripcion">
+          Vas a registrar la recepción del bolsín N° <span id="dialog-numero-bolsin" class="tabular-nums"></span>, con <span id="dialog-resumen-docs"></span> en <span id="dialog-resumen-remitos"></span>. Esto actualiza el estado del bolsín, de los remitos y de la documentación.
+        </p>
+        <p id="dialog-resumen-servidor" class="dialog-resumen-servidor" hidden></p>
+        <div id="dialog-error" class="banner banner-danger" role="alert" hidden>
+          <div class="banner-message">
+            <span class="banner-icon" aria-hidden="true">✖</span>
+            <span id="dialog-error-mensaje">Ocurrió un problema. Intentá de nuevo en unos segundos.</span>
+          </div>
+        </div>
+        <footer>
+          <button type="button" id="btn-no-confirmar" class="secondary outline">No confirmar</button>
+          <button type="button" id="btn-confirmar-recepcion" class="btn-primary">Confirmar recepción</button>
+        </footer>
+      </article>
+    </dialog>
   </main>
 </body>
 </html>

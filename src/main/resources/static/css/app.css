@@ -817,3 +817,78 @@ tbody tr[aria-selected="true"] {
   }
 }
 
+/* ==========================================================================
+   Paso 3 – Diálogo de Confirmación
+   ========================================================================== */
+
+dialog#dialog-confirmacion {
+  border: none;
+  background: transparent;
+  padding: 0;
+  max-width: 560px;
+  width: 90%;
+  margin: auto;
+}
+
+dialog#dialog-confirmacion::backdrop {
+  background-color: rgba(27, 36, 48, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+dialog#dialog-confirmacion article {
+  margin: 0;
+  padding: var(--app-space);
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--pico-border-radius);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+dialog#dialog-confirmacion article header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+dialog#dialog-confirmacion article header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--app-text);
+  margin-bottom: 0;
+}
+
+dialog#dialog-confirmacion #dialog-descripcion {
+  font-size: 0.95rem;
+  color: var(--app-text);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+.dialog-resumen-servidor {
+  font-size: 0.9rem;
+  color: var(--app-text-muted);
+  background-color: #F8FAFC;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--pico-border-radius);
+  border-left: 3px solid var(--pico-primary);
+  margin-bottom: 1rem;
+}
+
+dialog#dialog-confirmacion article footer {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--app-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  dialog#dialog-confirmacion article footer {
+    flex-direction: column-reverse;
+  }
+  dialog#dialog-confirmacion article footer button {
+    width: 100%;
+  }
+}
+

@@ -16,7 +16,10 @@
     selectedBolsin: null,
     bolsinDetalle: null,       // respuesta de /seleccionar-bolsin
     opcionElegida: null,       // número de opción seleccionada en Paso 2
-    ultimoReintento: null
+    ultimoReintento: null,
+    isConfirmingOrCancelling: false,
+    seleccionRecepcionRespuesta: null,
+    resultadoConfirmacion: null
   };
 
   // Exponer para depuración/inspección
@@ -44,6 +47,8 @@
     btnLimpiar: document.getElementById('btn-limpiar'),
     bannerFiltroError: document.getElementById('banner-filtro-error'),
     bannerFiltroMensaje: document.getElementById('banner-filtro-mensaje'),
+    bannerA6: document.getElementById('banner-a6'),
+    bannerA6Mensaje: document.getElementById('banner-a6-mensaje'),
     bannerErrorConexion: document.getElementById('banner-error-conexion'),
     mensajeErrorConexion: document.getElementById('mensaje-error-conexion'),
     btnReintentar: document.getElementById('btn-reintentar'),
@@ -70,7 +75,22 @@
     p2OpcionesLista: document.getElementById('p2-opciones-lista'),
     btnVolverP2: document.getElementById('btn-volver-p2'),
     btnCancelarP2: document.getElementById('btn-cancelar-p2'),
-    btnContinuarP2: document.getElementById('btn-continuar-p2')
+    btnContinuarP2: document.getElementById('btn-continuar-p2'),
+
+    // Paso 3 – Confirmación (Diálogo modal)
+    dialogConfirmacion: document.getElementById('dialog-confirmacion'),
+    dialogNumeroBolsin: document.getElementById('dialog-numero-bolsin'),
+    dialogResumenDocs: document.getElementById('dialog-resumen-docs'),
+    dialogResumenRemitos: document.getElementById('dialog-resumen-remitos'),
+    dialogResumenServidor: document.getElementById('dialog-resumen-servidor'),
+    dialogError: document.getElementById('dialog-error'),
+    dialogErrorMensaje: document.getElementById('dialog-error-mensaje'),
+    btnNoConfirmar: document.getElementById('btn-no-confirmar'),
+    btnConfirmarRecepcion: document.getElementById('btn-confirmar-recepcion'),
+
+    // Paso 4 – Resultado (Placeholder)
+    p4ResultadoDetalle: document.getElementById('p4-resultado-detalle'),
+    btnReiniciarDesdeP4: document.getElementById('btn-reiniciar-desde-p4')
   };
 
   // --- Helper de Fetch con cabecera obligatoria X-Empleado-Id ---
@@ -122,6 +142,14 @@
     state.currentComisionMedica = nombreCm;
     if (el.cmBadge) el.cmBadge.textContent = nombreCm;
     if (el.cmUsuarioSubtitulo) el.cmUsuarioSubtitulo.textContent = nombreCm;
+  }
+
+  function formatearRemitos(cantidad) {
+    return `${cantidad} ${cantidad === 1 ? 'remito' : 'remitos'}`;
+  }
+
+  function formatearDocumentaciones(cantidad) {
+    return `${cantidad} ${cantidad === 1 ? 'documentación' : 'documentaciones'}`;
   }
 
   // --- Navegación del Stepper y enfoque accesible ---
@@ -187,9 +215,17 @@
     if (el.btnLimpiar) el.btnLimpiar.disabled = cargando;
   }
 
-  function ocultarBanners() {
+  function ocultarBanners(mantenerA6 = false) {
     if (el.bannerFiltroError) el.bannerFiltroError.hidden = true;
     if (el.bannerErrorConexion) el.bannerErrorConexion.hidden = true;
+    if (!mantenerA6 && el.bannerA6) el.bannerA6.hidden = true;
+  }
+
+  function mostrarBannerA6(mensaje) {
+    if (el.bannerA6 && el.bannerA6Mensaje) {
+      el.bannerA6Mensaje.textContent = mensaje || 'No se registró la recepción. No se modificó ningún dato.';
+      el.bannerA6.hidden = false;
+    }
   }
 
   function mostrarErrorConexion(retryFn) {
@@ -285,9 +321,9 @@
   }
 
   // --- Carga inicial y filtros ---
-  async function cargarBolsinesIniciales() {
+  async function cargarBolsinesIniciales(mantenerA6 = false) {
     setCargando(true);
-    ocultarBanners();
+    ocultarBanners(mantenerA6);
     el.estadoVacio.hidden = true;
     el.contenedorTabla.hidden = true;
 
@@ -312,10 +348,10 @@
         el.contenedorTabla.hidden = true;
         el.estadoVacio.hidden = false;
       } else {
-        mostrarErrorConexion(() => cargarBolsinesIniciales());
+        mostrarErrorConexion(() => cargarBolsinesIniciales(mantenerA6));
       }
     } catch (err) {
-      mostrarErrorConexion(() => cargarBolsinesIniciales());
+      mostrarErrorConexion(() => cargarBolsinesIniciales(mantenerA6));
     }
   }
 
@@ -332,8 +368,7 @@
     }
 
     setCargando(true);
-    if (el.bannerFiltroError) el.bannerFiltroError.hidden = true;
-    if (el.bannerErrorConexion) el.bannerErrorConexion.hidden = true;
+    ocultarBanners();
 
     const params = [];
     if (precinto) params.push(`numeroPrecinto=${encodeURIComponent(precinto)}`);
@@ -396,7 +431,32 @@
     if (el.filtroCmOrigen) el.filtroCmOrigen.value = '';
     ocultarBanners();
     state.selectedBolsin = null;
+    state.bolsinDetalle = null;
+    state.opcionElegida = null;
+    state.seleccionRecepcionRespuesta = null;
+    state.resultadoConfirmacion = null;
     cargarBolsinesIniciales();
+  }
+
+  function volverPaso1ConA6(mensaje) {
+    goToStep(1);
+    if (el.filtroPrecinto) el.filtroPrecinto.value = '';
+    if (el.filtroCmOrigen) el.filtroCmOrigen.value = '';
+    ocultarBanners(true);
+    mostrarBannerA6(mensaje || 'No se registró la recepción. No se modificó ningún dato.');
+    state.selectedBolsin = null;
+    state.bolsinDetalle = null;
+    state.opcionElegida = null;
+    state.seleccionRecepcionRespuesta = null;
+    state.resultadoConfirmacion = null;
+
+    if (state.listaBolsinesOriginal && state.listaBolsinesOriginal.length > 0) {
+      renderTablaBolsines(state.listaBolsinesOriginal);
+      el.contenedorTabla.hidden = false;
+      el.estadoVacio.hidden = true;
+    } else {
+      cargarBolsinesIniciales(true);
+    }
   }
 
   async function cancelarProceso() {
@@ -595,7 +655,7 @@
       </div>
       <div class="resumen-campo">
         <span class="resumen-label">Contenido</span>
-        <span class="resumen-valor">${remitos.length} remito${remitos.length !== 1 ? 's' : ''} · ${totalDocs} documentacion${totalDocs !== 1 ? 'es' : ''}</span>
+        <span class="resumen-valor">${formatearRemitos(remitos.length)} · ${formatearDocumentaciones(totalDocs)}</span>
       </div>
     `;
     el.p2Resumen.hidden = false;
@@ -609,7 +669,7 @@
       if (idx === 0) details.setAttribute('open', '');
 
       details.innerHTML = `
-        <summary>Remito N° ${escapeHtml(String(remito.numeroRemito))} · ${docs.length} documentacion${docs.length !== 1 ? 'es' : ''}</summary>
+        <summary>Remito N° ${escapeHtml(String(remito.numeroRemito))} · ${formatearDocumentaciones(docs.length)}</summary>
         <div class="remito-tabla-wrapper">
           <table aria-label="Documentaciones del Remito N° ${escapeHtml(String(remito.numeroRemito))}">
             <thead>
@@ -679,8 +739,230 @@
 
   async function continuarDesdeP2() {
     if (!state.bolsinDetalle || state.opcionElegida === null) return;
-    // La confirmación la maneja el Paso 3 (siguiente parte).
-    goToStep(3);
+
+    el.btnContinuarP2.disabled = true;
+    el.btnContinuarP2.setAttribute('aria-busy', 'true');
+
+    try {
+      const res = await apiFetch('/api/recepcion-bolsin/seleccionar-recepcion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          numeroBolsin: Number(state.bolsinDetalle.numeroBolsin),
+          opcion: Number(state.opcionElegida)
+        })
+      });
+
+      el.btnContinuarP2.removeAttribute('aria-busy');
+      el.btnContinuarP2.disabled = false;
+
+      if (!res.ok) {
+        let msg = 'Ocurrió un problema. Intentá de nuevo en unos segundos.';
+        try {
+          const errData = await res.json();
+          if (errData && errData.mensaje) msg = errData.mensaje;
+        } catch (_) {}
+        mostrarErrorP2(msg);
+        return;
+      }
+
+      const data = await res.json();
+      state.seleccionRecepcionRespuesta = data;
+
+      goToStep(3);
+      abrirDialogoConfirmacion(data);
+
+    } catch (err) {
+      el.btnContinuarP2.removeAttribute('aria-busy');
+      el.btnContinuarP2.disabled = false;
+      mostrarErrorP2('Ocurrió un problema. Intentá de nuevo en unos segundos.');
+    }
+  }
+
+  // =========================================================================
+  // PASO 3 – Confirmación
+  // =========================================================================
+
+  function abrirDialogoConfirmacion(data) {
+    if (!el.dialogConfirmacion || !state.bolsinDetalle) return;
+
+    const remitos = state.bolsinDetalle.remitos || [];
+    const totalDocs = remitos.reduce((acc, r) => acc + (r.documentaciones || []).length, 0);
+
+    if (el.dialogNumeroBolsin) {
+      el.dialogNumeroBolsin.textContent = String(state.bolsinDetalle.numeroBolsin);
+    }
+    if (el.dialogResumenDocs) {
+      el.dialogResumenDocs.textContent = formatearDocumentaciones(totalDocs);
+    }
+    if (el.dialogResumenRemitos) {
+      el.dialogResumenRemitos.textContent = formatearRemitos(remitos.length);
+    }
+
+    if (el.dialogResumenServidor) {
+      if (data && data.resumen) {
+        el.dialogResumenServidor.textContent = data.resumen;
+        el.dialogResumenServidor.hidden = false;
+      } else {
+        el.dialogResumenServidor.hidden = true;
+      }
+    }
+
+    if (el.dialogError) {
+      el.dialogError.hidden = true;
+    }
+
+    if (el.btnConfirmarRecepcion) {
+      el.btnConfirmarRecepcion.disabled = false;
+      el.btnConfirmarRecepcion.textContent = 'Confirmar recepción';
+      el.btnConfirmarRecepcion.removeAttribute('aria-busy');
+    }
+    if (el.btnNoConfirmar) {
+      el.btnNoConfirmar.disabled = false;
+      el.btnNoConfirmar.textContent = 'No confirmar';
+      el.btnNoConfirmar.removeAttribute('aria-busy');
+    }
+
+    state.isConfirmingOrCancelling = false;
+
+    // Abrir diálogo como modal
+    el.dialogConfirmacion.showModal();
+
+    // Foco inicial en "No confirmar" (acción segura por defecto)
+    if (el.btnNoConfirmar) {
+      el.btnNoConfirmar.focus();
+    }
+  }
+
+  async function confirmarRecepcion() {
+    if (state.isConfirmingOrCancelling || !state.bolsinDetalle) return;
+    state.isConfirmingOrCancelling = true;
+
+    if (el.btnConfirmarRecepcion) {
+      el.btnConfirmarRecepcion.disabled = true;
+      el.btnConfirmarRecepcion.setAttribute('aria-busy', 'true');
+      el.btnConfirmarRecepcion.textContent = 'Registrando…';
+    }
+    if (el.btnNoConfirmar) {
+      el.btnNoConfirmar.disabled = true;
+    }
+    if (el.dialogError) {
+      el.dialogError.hidden = true;
+    }
+
+    try {
+      const res = await apiFetch('/api/recepcion-bolsin/confirmar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          numeroBolsin: Number(state.bolsinDetalle.numeroBolsin),
+          opcion: Number(state.opcionElegida),
+          confirmado: true
+        })
+      });
+
+      if (!res.ok) {
+        let msg = 'No se pudo registrar la recepción. No se modificó ningún dato.';
+        try {
+          const errData = await res.json();
+          if (errData && errData.mensaje) msg = errData.mensaje;
+        } catch (_) {}
+
+        if (el.btnConfirmarRecepcion) {
+          el.btnConfirmarRecepcion.disabled = false;
+          el.btnConfirmarRecepcion.removeAttribute('aria-busy');
+          el.btnConfirmarRecepcion.textContent = 'Confirmar recepción';
+        }
+        if (el.btnNoConfirmar) {
+          el.btnNoConfirmar.disabled = false;
+        }
+        if (el.dialogError && el.dialogErrorMensaje) {
+          el.dialogErrorMensaje.textContent = msg;
+          el.dialogError.hidden = false;
+        }
+        state.isConfirmingOrCancelling = false;
+        return;
+      }
+
+      const data = await res.json();
+      state.resultadoConfirmacion = data;
+
+      el.dialogConfirmacion.close();
+      state.isConfirmingOrCancelling = false;
+
+      // Avanzar al Paso 4 (placeholder)
+      renderPaso4(data);
+      goToStep(4);
+
+    } catch (err) {
+      if (el.btnConfirmarRecepcion) {
+        el.btnConfirmarRecepcion.disabled = false;
+        el.btnConfirmarRecepcion.removeAttribute('aria-busy');
+        el.btnConfirmarRecepcion.textContent = 'Confirmar recepción';
+      }
+      if (el.btnNoConfirmar) {
+        el.btnNoConfirmar.disabled = false;
+      }
+      if (el.dialogError && el.dialogErrorMensaje) {
+        el.dialogErrorMensaje.textContent = 'Ocurrió un problema de conexión al registrar la recepción.';
+        el.dialogError.hidden = false;
+      }
+      state.isConfirmingOrCancelling = false;
+    }
+  }
+
+  async function noConfirmarRecepcion() {
+    if (state.isConfirmingOrCancelling || !state.bolsinDetalle) return;
+    state.isConfirmingOrCancelling = true;
+
+    if (el.btnConfirmarRecepcion) el.btnConfirmarRecepcion.disabled = true;
+    if (el.btnNoConfirmar) el.btnNoConfirmar.disabled = true;
+
+    try {
+      const res = await apiFetch('/api/recepcion-bolsin/confirmar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          numeroBolsin: Number(state.bolsinDetalle.numeroBolsin),
+          opcion: Number(state.opcionElegida),
+          confirmado: false
+        })
+      });
+
+      let mensaje = 'No se registró la recepción. No se modificó ningún dato.';
+      if (res.ok) {
+        try {
+          const data = await res.json();
+          if (data && data.mensaje) mensaje = data.mensaje;
+        } catch (_) {}
+      }
+
+      el.dialogConfirmacion.close();
+      volverPaso1ConA6(mensaje);
+
+    } catch (err) {
+      el.dialogConfirmacion.close();
+      volverPaso1ConA6('No se registró la recepción. No se modificó ningún dato.');
+    } finally {
+      state.isConfirmingOrCancelling = false;
+    }
+  }
+
+  // =========================================================================
+  // PASO 4 – Resultado (Placeholder)
+  // =========================================================================
+
+  function renderPaso4(resultado) {
+    if (!el.p4ResultadoDetalle) return;
+    el.p4ResultadoDetalle.innerHTML = `
+      <p>${escapeHtml(resultado.mensaje || 'La recepción del bolsín ha sido registrada.')}</p>
+      <ul>
+        <li><strong>Bolsín N°:</strong> ${escapeHtml(String(resultado.numeroBolsin ?? state.bolsinDetalle?.numeroBolsin ?? '-'))}</li>
+        <li><strong>Nuevo estado:</strong> ${escapeHtml(resultado.nuevoEstadoBolsin ?? 'Recibido en CM destino')}</li>
+        <li><strong>Remitos actualizados:</strong> ${escapeHtml(String(resultado.remitosActualizados ?? 0))}</li>
+        <li><strong>Documentaciones actualizadas:</strong> ${escapeHtml(String(resultado.documentacionesActualizadas ?? 0))}</li>
+      </ul>
+    `;
   }
 
   // --- Registro de Event Listeners ---
@@ -726,6 +1008,36 @@
 
     if (el.btnContinuarP2) {
       el.btnContinuarP2.addEventListener('click', continuarDesdeP2);
+    }
+
+    // Paso 3 – Confirmación
+    if (el.dialogConfirmacion) {
+      // Esc = no confirmar
+      el.dialogConfirmacion.addEventListener('cancel', (e) => {
+        e.preventDefault();
+        noConfirmarRecepcion();
+      });
+    }
+
+    if (el.btnNoConfirmar) {
+      el.btnNoConfirmar.addEventListener('click', (e) => {
+        e.preventDefault();
+        noConfirmarRecepcion();
+      });
+    }
+
+    if (el.btnConfirmarRecepcion) {
+      el.btnConfirmarRecepcion.addEventListener('click', (e) => {
+        e.preventDefault();
+        confirmarRecepcion();
+      });
+    }
+
+    // Paso 4 – Resultado (Placeholder)
+    if (el.btnReiniciarDesdeP4) {
+      el.btnReiniciarDesdeP4.addEventListener('click', () => {
+        reiniciarWizard();
+      });
     }
   }
 
