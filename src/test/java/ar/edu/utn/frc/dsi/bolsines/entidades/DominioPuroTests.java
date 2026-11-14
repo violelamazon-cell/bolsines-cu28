@@ -210,5 +210,20 @@ class DominioPuroTests {
         assertEquals(e1.hashCode(), e2.hashCode());
         assertNotEquals(e1, e3);
     }
+
+    @Test
+    @DisplayName("Bolsin.buscarCMOrigen: devuelve el nombre cuando la CM tiene nombre y '' cuando origen es null")
+    void testBuscarCMOrigen() {
+        Bolsin bolsinSinOrigen = new Bolsin(1001, 50001, LocalDateTime.now(), 1000.0, null, null);
+        assertEquals("", bolsinSinOrigen.buscarCMOrigen());
+
+        ComisionMedica cm = new ComisionMedica("CM-MZA", "CM Mendoza", "San Martín 100", "mza@cm.gob.ar", "12345");
+        Bolsin bolsinConOrigen = new Bolsin(1002, 50002, LocalDateTime.now(), 1000.0, cm, null);
+        assertEquals("CM Mendoza", bolsinConOrigen.buscarCMOrigen());
+
+        ComisionMedica cmSinNombre = new ComisionMedica("CM-VMA", "", "Calle 1", "vma@cm.gob.ar", "12345");
+        Bolsin bolsinOrigenSinNombre = new Bolsin(1003, 50003, LocalDateTime.now(), 1000.0, cmSinNombre, null);
+        assertEquals("", bolsinOrigenSinNombre.buscarCMOrigen());
+    }
 }
 

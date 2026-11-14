@@ -161,7 +161,10 @@ public class Bolsin {
      * CU 28 – Paso 4: Retorna el nombre de la Comisión Médica de origen.
      */
     public String buscarCMOrigen() {
-        return this.origen != null ? this.origen.getNombre() : "";
+        if (this.origen != null && this.origen.esDeOrigen()) {
+            return this.origen.getNombre();
+        }
+        return "";
     }
 
     /**
