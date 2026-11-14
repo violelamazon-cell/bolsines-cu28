@@ -548,6 +548,30 @@
     }
   }
 
+  async function cargarComisionesMedicas() {
+    if (!el.filtroCmOrigen) return;
+
+    try {
+      const res = await apiFetch('/api/comisiones-medicas');
+      if (!res.ok) throw new Error('Error al cargar comisiones médicas');
+      const data = await res.json();
+      const comisiones = Array.isArray(data) ? data : (data?.comisiones || []);
+
+      el.filtroCmOrigen.innerHTML = '<option value="">Todas las comisiones</option>';
+      comisiones.forEach(cm => {
+        const nombre = typeof cm === 'string' ? cm : (cm?.nombre ?? cm?.nombreCm ?? '');
+        if (nombre) {
+          const opt = document.createElement('option');
+          opt.value = nombre;
+          opt.textContent = nombre;
+          el.filtroCmOrigen.appendChild(opt);
+        }
+      });
+    } catch (_) {
+      el.filtroCmOrigen.innerHTML = '<option value="">Todas las comisiones</option>';
+    }
+  }
+
   function renderTablaBolsines(bolsines) {
     el.tablaBolsinesBody.innerHTML = '';
 
@@ -566,9 +590,6 @@
       const cmOrigen = bolsin.cmOrigen ?? bolsin.comisionMedicaOrigen ?? (bolsin.comisionMedica?.nombre) ?? bolsin.origen ?? '-';
 
       const tr = document.createElement('tr');
-      tr.setAttribute('tabindex', '0');
-      tr.setAttribute('aria-selected', 'false');
-      tr.setAttribute('aria-label', `Seleccionar bolsín precinto ${precinto} de ${cmOrigen}`);
       tr.dataset.numeroBolsin = String(numBolsin);
 
       tr.innerHTML = `
@@ -581,27 +602,16 @@
         </td>
       `;
 
-      tr.addEventListener('click', () => seleccionarFila(bolsin, tr));
-      tr.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seleccionarFila(bolsin, tr); }
-      });
-
       const btn = tr.querySelector('.btn-seleccionar');
-      if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); seleccionarFila(bolsin, tr); });
+      if (btn) {
+        btn.addEventListener('click', () => {
+          state.selectedBolsin = bolsin;
+          seleccionarBolsin(numBolsin);
+        });
+      }
 
       el.tablaBolsinesBody.appendChild(tr);
     });
-  }
-
-  function seleccionarFila(bolsin, trElement) {
-    state.selectedBolsin = bolsin;
-    el.tablaBolsinesBody.querySelectorAll('tr').forEach(row => {
-      row.classList.remove('selected');
-      row.setAttribute('aria-selected', 'false');
-    });
-    trElement.classList.add('selected');
-    trElement.setAttribute('aria-selected', 'true');
-    seleccionarBolsin(bolsin.numeroBolsin ?? bolsin.numero ?? bolsin.id);
   }
 
   async function cargarBolsinesIniciales(mantenerA6 = false) {
@@ -678,7 +688,10 @@
 
   function limpiarFiltros() {
     if (el.filtroPrecinto) el.filtroPrecinto.value = '';
-    if (el.filtroCmOrigen) el.filtroCmOrigen.value = '';
+    if (el.filtroCmOrigen) {
+      el.filtroCmOrigen.value = '';
+      el.filtroCmOrigen.selectedIndex = 0;
+    }
     ocultarBanners();
     if (state.listaBolsinesOriginal && state.listaBolsinesOriginal.length > 0) {
       renderTablaBolsines(state.listaBolsinesOriginal);
@@ -702,7 +715,10 @@
   function reiniciarWizard() {
     goToStep(1);
     if (el.filtroPrecinto) el.filtroPrecinto.value = '';
-    if (el.filtroCmOrigen) el.filtroCmOrigen.value = '';
+    if (el.filtroCmOrigen) {
+      el.filtroCmOrigen.value = '';
+      el.filtroCmOrigen.selectedIndex = 0;
+    }
     ocultarBanners();
     state.selectedBolsin = null;
     state.bolsinDetalle = null;
@@ -716,7 +732,10 @@
   function volverPaso1ConA6(mensaje) {
     goToStep(1);
     if (el.filtroPrecinto) el.filtroPrecinto.value = '';
-    if (el.filtroCmOrigen) el.filtroCmOrigen.value = '';
+    if (el.filtroCmOrigen) {
+      el.filtroCmOrigen.value = '';
+      el.filtroCmOrigen.selectedIndex = 0;
+    }
     ocultarBanners(true);
     mostrarBannerA6(mensaje || 'No se registró la recepción. No se modificó ningún dato.');
     state.selectedBolsin = null;
@@ -730,7 +749,14 @@
 
   async function cancelarProceso() {
     try { await apiFetch('/api/recepcion-bolsin/cancelar', { method: 'POST' }); } catch (_) {}
-    reiniciarWizard();
+    if (el.filtroPrecinto) el.filtroPrecinto.value = '';
+    if (el.filtroCmOrigen) {
+      el.filtroCmOrigen.value = '';
+      el.filtroCmOrigen.selectedIndex = 0;
+    }
+    ocultarBanners();
+    reiniciarEstadoAsistente();
+    navigate('inicio');
   }
 
   // =========================================================================
@@ -1089,6 +1115,7 @@
     // Después de navegar, inicializa el wizard desde paso 1
     requestAnimationFrame(() => {
       actualizarHeaderRecepcion();
+      cargarComisionesMedicas();
       goToStep(1);
       cargarBolsinesIniciales();
     });
@@ -1159,6 +1186,7 @@
 
   async function inicializar() {
     inicializarEventos();
+    cargarComisionesMedicas();
 
     // Intentar recuperar la sesión activa al cargar
     try {

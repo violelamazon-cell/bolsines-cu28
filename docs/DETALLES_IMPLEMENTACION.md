@@ -36,6 +36,7 @@ El diseño respeta estrictamente la separación de responsabilidades establecida
 │   ar.edu.utn.frc.dsi.bolsines.boundary                                 │
 │   • PantallaRegistrarRecepcionBolsin (@RestController)                 │
 │   • SesionController (@RestController)                                │
+│   • ComisionMedicaController (@RestController)                         │
 │   • ManejadorExcepciones (@RestControllerAdvice)                       │
 │   • dto.* (Java records: BolsinResumenDto, RemitoDto, etc.)            │
 └───────────────────────────────────┬────────────────────────────────────┘
@@ -129,6 +130,7 @@ Todos los endpoints responden en formato JSON y manejan errores de manera unifor
 | `GET` | `/api/sesion` | `?empleadoId=1` | Obtiene el usuario activo y su Comisión Médica. | `200 OK` |
 | `GET` | `/api/sesion/empleados` | — | Lista todos los empleados disponibles para cambiar de usuario. | `200 OK` |
 | `POST` | `/api/sesion/iniciar` | Body: `{ "empleadoId": 4 }` | Cambia el usuario activo y reinicia el flujo. | `200 OK` |
+| `GET` | `/api/comisiones-medicas` | — | **Paso 1 (Filtro):** Lista todas las Comisiones Médicas para poblar el desplegable de CM de origen. | `200 OK` |
 | `POST` | `/api/recepcion-bolsin/iniciar` | `X-Empleado-Id: 1` | **Pasos 1–4:** Inicia el caso de uso y lista los bolsines en estado "Enviado" hacia la CM del usuario. | `200 OK` / `404 Not Found` |
 | `GET` | `/api/recepcion-bolsin/bolsines` | `?numeroPrecinto=&cmOrigen=` | **Paso 4 (Filtro):** Filtra bolsines por precinto o CM origen. | `200 OK` / `404 Not Found` (A1 / A2) |
 | `POST` | `/api/recepcion-bolsin/seleccionar-bolsin` | Body: `{ "numeroBolsin": 1001 }` | **Pasos 5–7:** Selecciona bolsín y devuelve remitos, documentaciones y opciones de recepción. | `200 OK` / `404 Not Found` |
