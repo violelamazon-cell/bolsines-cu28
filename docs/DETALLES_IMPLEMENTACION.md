@@ -36,6 +36,7 @@ El diseño respeta estrictamente la separación de responsabilidades establecida
 │   ar.edu.utn.frc.dsi.bolsines.boundary                                 │
 │   • PantallaRegistrarRecepcionBolsin (@RestController)                 │
 │   • SesionController (@RestController)                                │
+│   • ComisionMedicaController (@RestController)                         │
 │   • ManejadorExcepciones (@RestControllerAdvice)                       │
 │   • dto.* (Java records: BolsinResumenDto, RemitoDto, etc.)            │
 └───────────────────────────────────┬────────────────────────────────────┘
@@ -76,9 +77,9 @@ La consigna de la cátedra exige que el ciclo de vida de la clase `Documentacion
 1. **Contexto (`Documentacion`):**
    * Archivo: `src/main/java/ar/edu/utn/frc/dsi/bolsines/entidades/Documentacion.java`
    * Mantiene una referencia polimórfica a la interfaz abstracta `Estado estado`.
-   * El método `aceptar(LocalDateTime fechaHoraActual, Empleado responsable)` contiene **cero condicionales**:
+   * El método `aceptar(LocalDateTime fechaHoraActual, String[] responsable)` contiene **cero condicionales**:
      ```java
-     public void aceptar(LocalDateTime fechaHoraActual, Empleado responsable) {
+     public void aceptar(LocalDateTime fechaHoraActual, String[] responsable) {
          this.estado.aceptar(this, fechaHoraActual, responsable, this.cambioEstado);
      }
      ```
@@ -91,7 +92,7 @@ La consigna de la cátedra exige que el ciclo de vida de la clase `Documentacion
    * Sobrescribe el método `aceptar(...)` ejecutando la secuencia exacta definida en el diagrama de secuencia E2 (paso 11c):
      ```java
      @Override
-     public void aceptar(Documentacion doc, LocalDateTime ahora, Empleado resp, List<CambioEstadoDocumentacion> cambios) {
+     public void aceptar(Documentacion doc, LocalDateTime ahora, String[] resp, List<CambioEstadoDocumentacion> cambios) {
          // 1. actual = buscarEstadoActual(cambios)
          CambioEstadoDocumentacion actual = buscarEstadoActual(cambios);
          // 2. actual.setFechaHoraFin(ahora)
@@ -118,6 +119,13 @@ Para no crear tablas redundantes en la base de datos para clases que no tienen a
 * En base de datos, la columna `estado` de la tabla `documentaciones` se almacena como `VARCHAR(50)` con el nombre canónico (ej: `"En bolsín enviado"` o `"Recibida y aceptada"`).
 * Al leer de la base de datos, `EstadoFactory` reconstituye la instancia concreta del estado correspondiente.
 
+### 3.4 Persistencia de Responsable (`ResponsableConverter`) y Constructores de Cambio de Estado
+Para respetar la especificación del modelado (`responsableCE: string[]` / `empleadoLogueado: string[]` con nombre y apellido) sin desarmar la persistencia en una tabla extra, se utiliza un `AttributeConverter`:
+* Archivo: `src/main/java/ar/edu/utn/frc/dsi/bolsines/entidades/ResponsableConverter.java`
+* En base de datos, la columna `responsable_ce` de las tablas `cambios_estado_bolsin` y `cambios_estado_documentacion` se almacena como `VARCHAR(200)` en formato `"nombre|apellido"` (ej. `"Carlos|Gómez"`). Se asume la limitación técnica de que un nombre o apellido que contenga `"|"` rompería la lectura.
+* Al leer de la base de datos, se deserializa nuevamente en un arreglo `String[]{nombre, apellido}`.
+* **Constructores de dominio:** En correspondencia con los mensajes `new` del diagrama de secuencia E2, `CambioEstadoBolsin` y `CambioEstadoDocumentacion` cuentan con constructores de 3 parámetros `(fechaHoraInicio, responsable, estado)` que inicializan `fechaHoraFin` en `null`. El constructor sobrecargado de 4 parámetros se preserva exclusivamente para la siembra de datos históricos (`DataLoader`) y fixtures de prueba.
+
 ---
 
 ## 4. Contrato de la API REST
@@ -129,11 +137,12 @@ Todos los endpoints responden en formato JSON y manejan errores de manera unifor
 | `GET` | `/api/sesion` | `?empleadoId=1` | Obtiene el usuario activo y su Comisión Médica. | `200 OK` |
 | `GET` | `/api/sesion/empleados` | — | Lista todos los empleados disponibles para cambiar de usuario. | `200 OK` |
 | `POST` | `/api/sesion/iniciar` | Body: `{ "empleadoId": 4 }` | Cambia el usuario activo y reinicia el flujo. | `200 OK` |
+| `GET` | `/api/comisiones-medicas` | — | **Paso 1 (Filtro):** Lista todas las Comisiones Médicas para poblar el desplegable de CM de origen. | `200 OK` |
 | `POST` | `/api/recepcion-bolsin/iniciar` | `X-Empleado-Id: 1` | **Pasos 1–4:** Inicia el caso de uso y lista los bolsines en estado "Enviado" hacia la CM del usuario. | `200 OK` / `404 Not Found` |
 | `GET` | `/api/recepcion-bolsin/bolsines` | `?numeroPrecinto=&cmOrigen=` | **Paso 4 (Filtro):** Filtra bolsines por precinto o CM origen. | `200 OK` / `404 Not Found` (A1 / A2) |
 | `POST` | `/api/recepcion-bolsin/seleccionar-bolsin` | Body: `{ "numeroBolsin": 1001 }` | **Pasos 5–7:** Selecciona bolsín y devuelve remitos, documentaciones y opciones de recepción. | `200 OK` / `404 Not Found` |
 | `POST` | `/api/recepcion-bolsin/seleccionar-recepcion` | Body: `{ "numeroBolsin": 1001, "opcion": 1 }` | **Pasos 8–9:** Valida opción y prepara el resumen de confirmación. Opciones 2, 3 y 4 devuelven 501. | `200 OK` / `501 Not Implemented` |
-| `POST` | `/api/recepcion-bolsin/confirmar` | Body: `{ "numeroBolsin": 1001, "opcion": 1, "confirmado": true }` | **Pasos 10–12:** Si es `true`, ejecuta la transacción de recepción física y notificaciones. Si es `false` (A6), no modifica la base de datos. | `200 OK` / `409 Conflict` |
+| `POST` | `/api/recepcion-bolsin/confirmar` | Body: `{ "numeroBolsin": 1001, "opcion": 1, "confirmado": true }` | **Pasos 10–12:** Si es `true`, ejecuta la transacción de recepción física y notificaciones. Retorna `ConfirmarRecepcionResponse` con `nuevoEstadoBolsin`, `nuevoEstadoRemitos`, `nuevoEstadoDocumentaciones`, `remitosActualizados`, `documentacionesActualizadas` y `notificaciones`. Si es `false` (A6), no modifica la base de datos. | `200 OK` / `409 Conflict` |
 | `POST` | `/api/recepcion-bolsin/cancelar` | — | **Obs. 1:** Cancela el proceso de recepción en curso sin alterar datos. | `204 No Content` |
 
 ---

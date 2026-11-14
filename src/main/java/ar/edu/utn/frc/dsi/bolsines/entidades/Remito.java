@@ -119,7 +119,7 @@ public class Remito {
      * CU 28 – Paso 11b: Actualiza el estado del remito a 'Recibido y Aceptado'
      * y propaga la actualización a sus renglones de documentación.
      */
-    public void recibirYAceptar(EstadoRemito nuevoEstado, LocalDateTime fechaHoraActual, Empleado responsable) {
+    public void recibirYAceptar(EstadoRemito nuevoEstado, LocalDateTime fechaHoraActual, String[] responsable) {
         this.estado = nuevoEstado;
         recibirYAceptarDocumentacion(fechaHoraActual, responsable);
     }
@@ -128,7 +128,7 @@ public class Remito {
      * Itera por los detalles del remito delegando la aceptación de la documentación asociada.
      * Corresponde al mensaje recibirYAceptarDocumentacion() en el diagrama de secuencia.
      */
-    public void recibirYAceptarDocumentacion(LocalDateTime fechaHoraActual, Empleado responsable) {
+    public void recibirYAceptarDocumentacion(LocalDateTime fechaHoraActual, String[] responsable) {
         for (DetalleRemito detalle : this.detalleRemito) {
             detalle.recibirYAceptarDocumentacion(fechaHoraActual, responsable);
         }

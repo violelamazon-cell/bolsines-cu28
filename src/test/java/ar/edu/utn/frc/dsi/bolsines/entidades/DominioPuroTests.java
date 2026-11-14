@@ -24,8 +24,8 @@ class DominioPuroTests {
         LocalDateTime ahora = LocalDateTime.now();
         ComisionMedica cmOrigen = new ComisionMedica("CM-MZA", "CM Mendoza", "San Martin 100", "m@m.com", "123");
         TipoDocumento tipo = new TipoDocumento("Expediente", "Expediente de prueba");
-        Empleado respEnvio = new Empleado("Ana", "Martínez", "ana@mendoza.gov.ar", cmOrigen);
-        Empleado respRecepcion = new Empleado("Carlos", "Gómez", "carlos@cordoba.gov.ar", null);
+        String[] respEnvio = new String[]{"Ana", "Martínez"};
+        String[] respRecepcion = new String[]{"Carlos", "Gómez"};
 
         // Documentación en estado inicial EnBolsinEnviado
         Documentacion doc = new Documentacion(3001, "Expediente López", ahora.minusDays(2), cmOrigen, tipo, new EnBolsinEnviado());
@@ -34,7 +34,7 @@ class DominioPuroTests {
         CambioEstadoDocumentacion cambioPrevio = new CambioEstadoDocumentacion(ahora.minusDays(1), null, new EnBolsinEnviado(), respEnvio);
         doc.agregarCambioEstado(cambioPrevio);
 
-        assertTrue(cambioPrevio.esActual(), "El cambio previo debe ser actual antes de la transición");
+        assertTrue(cambioPrevio.esEstadoActual(), "El cambio previo debe ser actual antes de la transición");
         assertEquals(EnBolsinEnviado.NOMBRE, doc.getEstado().getNombre());
 
         // EJECUCIÓN: CU 28 Paso 11c
@@ -45,17 +45,17 @@ class DominioPuroTests {
         assertEquals(RecibidaYAceptada.NOMBRE, doc.getEstado().getNombre());
 
         // 2. El cambio anterior debe haber sido cerrado con fechaHoraFin = ahora
-        assertFalse(cambioPrevio.esActual(), "El cambio anterior ya no debe ser actual");
+        assertFalse(cambioPrevio.esEstadoActual(), "El cambio anterior ya no debe ser actual");
         assertEquals(ahora, cambioPrevio.getFechaHoraFin(), "La fechaHoraFin del cambio previo debe ser 'ahora'");
 
         // 3. Se debe haber agregado un nuevo CambioEstadoDocumentacion al historial
         assertEquals(2, doc.getCambioEstado().size(), "El historial debe contener 2 cambios");
         CambioEstadoDocumentacion cambioNuevo = doc.getCambioEstado().get(1);
 
-        assertTrue(cambioNuevo.esActual(), "El nuevo cambio debe ser el vigente (fechaHoraFin == null)");
+        assertTrue(cambioNuevo.esEstadoActual(), "El nuevo cambio debe ser el vigente (fechaHoraFin == null)");
         assertNull(cambioNuevo.getFechaHoraFin());
         assertEquals(ahora, cambioNuevo.getFechaHoraInicio());
-        assertEquals(respRecepcion, cambioNuevo.getResponsableCE(), "El responsable debe ser el empleado que recibió");
+        assertArrayEquals(respRecepcion, cambioNuevo.getResponsableCE(), "El responsable debe ser el empleado que recibió");
         assertEquals(RecibidaYAceptada.NOMBRE, cambioNuevo.getEstado().getNombre());
     }
 
@@ -63,7 +63,7 @@ class DominioPuroTests {
     @DisplayName("Patrón State: Transición no permitida lanza IllegalStateException")
     void testTransicionNoPermitidaLanzaExcepcion() {
         LocalDateTime ahora = LocalDateTime.now();
-        Empleado empleado = new Empleado("Carlos", "Gómez", "carlos@cordoba.gov.ar", null);
+        String[] empleado = new String[]{"Carlos", "Gómez"};
 
         // Una documentación en estado 'Registrada' NO puede ser 'aceptada' directamente en el CU 28
         Documentacion docRegistrada = new Documentacion(9001, "Doc Nueva", ahora, null, null, new Registrada());
@@ -88,7 +88,7 @@ class DominioPuroTests {
     @DisplayName("Patrón Experto: Bolsin.sosEnviado() responde según su cambio de estado actual")
     void testBolsinSosEnviado() {
         LocalDateTime ahora = LocalDateTime.now();
-        Empleado emp = new Empleado("Ana", "Martínez", "ana@mza.com", null);
+        String[] emp = new String[]{"Ana", "Martínez"};
         EstadoBolsin ebCreado = new EstadoBolsin(EstadoBolsin.CREADO, "Creado");
         EstadoBolsin ebEnviado = new EstadoBolsin(EstadoBolsin.ENVIADO, "Enviado");
 
@@ -117,8 +117,8 @@ class DominioPuroTests {
     @DisplayName("Patrón Experto: Bolsin.recibir() cierra cambio vigente y agrega 'Recibido en CM destino'")
     void testBolsinRecibir() {
         LocalDateTime ahora = LocalDateTime.now();
-        Empleado respEnvio = new Empleado("Ana", "Martínez", "ana@mza.com", null);
-        Empleado respRecepcion = new Empleado("Carlos", "Gómez", "carlos@cba.com", null);
+        String[] respEnvio = new String[]{"Ana", "Martínez"};
+        String[] respRecepcion = new String[]{"Carlos", "Gómez"};
 
         EstadoBolsin ebEnviado = new EstadoBolsin(EstadoBolsin.ENVIADO, "Enviado");
         EstadoBolsin ebRecibido = new EstadoBolsin(EstadoBolsin.RECIBIDO_EN_CM_DESTINO, "Recibido en CM destino");
@@ -142,7 +142,7 @@ class DominioPuroTests {
         assertNotNull(cNuevo);
         assertTrue(cNuevo.esActual());
         assertEquals(ebRecibido, cNuevo.getEstado());
-        assertEquals(respRecepcion, cNuevo.getResponsableCE());
+        assertArrayEquals(respRecepcion, cNuevo.getResponsableCE());
         assertEquals(ahora, cNuevo.getFechaHoraInicio());
 
         // 3. Ya no es enviado
@@ -153,7 +153,7 @@ class DominioPuroTests {
     @DisplayName("Integración pura de dominio: recibirYAceptarRemitos propaga la actualización al State de Documentacion")
     void testRecibirYAceptarRemitosPropagacion() {
         LocalDateTime ahora = LocalDateTime.now();
-        Empleado resp = new Empleado("Carlos", "Gómez", "carlos@cba.com", null);
+        String[] resp = new String[]{"Carlos", "Gómez"};
 
         EstadoRemito erEnviado = new EstadoRemito(EstadoRemito.EN_BOLSIN_ENVIADO, "Enviado");
         EstadoRemito erRecibido = new EstadoRemito(EstadoRemito.RECIBIDO_Y_ACEPTADO, "Recibido y Aceptado");
@@ -209,6 +209,21 @@ class DominioPuroTests {
         assertEquals(e1, e2);
         assertEquals(e1.hashCode(), e2.hashCode());
         assertNotEquals(e1, e3);
+    }
+
+    @Test
+    @DisplayName("Bolsin.buscarCMOrigen: devuelve el nombre cuando la CM tiene nombre y '' cuando origen es null")
+    void testBuscarCMOrigen() {
+        Bolsin bolsinSinOrigen = new Bolsin(1001, 50001, LocalDateTime.now(), 1000.0, null, null);
+        assertEquals("", bolsinSinOrigen.buscarCMOrigen());
+
+        ComisionMedica cm = new ComisionMedica("CM-MZA", "CM Mendoza", "San Martín 100", "mza@cm.gob.ar", "12345");
+        Bolsin bolsinConOrigen = new Bolsin(1002, 50002, LocalDateTime.now(), 1000.0, cm, null);
+        assertEquals("CM Mendoza", bolsinConOrigen.buscarCMOrigen());
+
+        ComisionMedica cmSinNombre = new ComisionMedica("CM-VMA", "", "Calle 1", "vma@cm.gob.ar", "12345");
+        Bolsin bolsinOrigenSinNombre = new Bolsin(1003, 50003, LocalDateTime.now(), 1000.0, cmSinNombre, null);
+        assertEquals("", bolsinOrigenSinNombre.buscarCMOrigen());
     }
 }
 

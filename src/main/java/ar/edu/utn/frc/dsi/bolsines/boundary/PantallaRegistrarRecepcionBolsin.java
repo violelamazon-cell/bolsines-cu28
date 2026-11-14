@@ -131,5 +131,6 @@ public class PantallaRegistrarRecepcionBolsin {
         gestor.cancelar();
         return ResponseEntity.noContent().build();
     }
+
 }
 

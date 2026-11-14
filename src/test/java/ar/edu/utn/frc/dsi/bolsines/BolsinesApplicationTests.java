@@ -90,7 +90,7 @@ class BolsinesApplicationTests {
 
 			// Verificar que el historial tiene su cambio vigente con fechaHoraFin = null
 			CambioEstadoDocumentacion cambioVigente = doc.getCambioEstado().stream()
-					.filter(CambioEstadoDocumentacion::esActual)
+					.filter(CambioEstadoDocumentacion::esEstadoActual)
 					.findFirst()
 					.orElseThrow(() -> new AssertionError("No se encontró cambio vigente para doc #" + doc.getNumero()));
 

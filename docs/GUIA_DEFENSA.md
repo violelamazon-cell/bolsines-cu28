@@ -35,9 +35,9 @@ Esta tabla permite ubicar inmediatamente en el código cualquier elemento modela
 1. **Contexto (`Documentacion`):**
    * Archivo: `src/main/java/ar/edu/utn/frc/dsi/bolsines/entidades/Documentacion.java`
    * Mantiene el atributo polimórfico `private Estado estado;`.
-   * El método `aceptar(LocalDateTime fechaHoraActual, Empleado responsable)` **no tiene ningún `if` ni `switch`**:
+   * El método `aceptar(LocalDateTime fechaHoraActual, String[] responsable)` **no tiene ningún `if` ni `switch`**:
      ```java
-     public void aceptar(LocalDateTime fechaHoraActual, Empleado responsable) {
+     public void aceptar(LocalDateTime fechaHoraActual, String[] responsable) {
          this.estado.aceptar(this, fechaHoraActual, responsable, this.cambioEstado);
      }
      ```
@@ -141,13 +141,12 @@ Basada en los artefactos del grupo (`docs/mapaempatia.jpeg` con Ernesto Valencia
    *Explicar:* Se observa que el cambio anterior ("Enviado") tiene `fecha_hora_fin` con valor, y el nuevo cambio ("Recibido en CM destino") está vigente (`fecha_hora_fin` es `NULL`).
 3. Ejecutar sobre documentación:
    ```sql
-   SELECT d.numero, d.estado, ced.fecha_hora_inicio, ced.fecha_hora_fin, e.nombre, e.apellido 
+   SELECT d.numero, d.estado, ced.fecha_hora_inicio, ced.fecha_hora_fin, ced.responsable_ce 
    FROM documentaciones d 
    JOIN cambios_estado_documentacion ced ON ced.documentacion_id = d.id 
-   JOIN empleados e ON ced.responsable_ce_id = e.id 
    WHERE d.numero = 3001;
    ```
-   *Explicar:* El estado cambió a `"Recibida y aceptada"` y el responsable registrado en el cambio es Carlos Gómez.
+   *Explicar:* El estado cambió a `"Recibida y aceptada"` y el responsable registrado en la columna `responsable_ce` es `"Carlos|Gómez"` (serializado mediante `ResponsableConverter` para persistir el `String[]` del modelado en formato `nombre|apellido`). Se asume la limitación de que un nombre o apellido con `"|"` rompería la lectura.
 
 ### Escenario 3: Flujos Alternativos
 * **Flujo A1 (Precinto inexistente):** En el filtro de precinto, tipear `99999` y presionar Buscar. Mostrar el banner de advertencia ("No se encontró un bolsín con el número de precinto ingresado") y verificar que la tabla anterior no desaparece. Presionar *Limpiar*.
@@ -179,4 +178,6 @@ Basada en los artefactos del grupo (`docs/mapaempatia.jpeg` con Ernesto Valencia
    Porque el objetivo primario del CU 28 (la recepción física y documental en la Comisión Médica) ya se completó con éxito. El envío de email es una notificación secundaria correspondiente a otro caso de uso (CU 29). Revertir la recepción física por una falla en la red de correo electrónico causaría una discrepancia grave entre la realidad física y el sistema.
 10. **¿Cómo se asegura que no se dupliquen los datos semilla al reiniciar?**  
     El componente `DataLoader` ejecuta una consulta previa (`bolsinRepository.count() > 0`). Si la base de datos ya contiene registros, omite la siembra. Solo inicializa los datos si la base está completamente vacía o si se pasa explícitamente el flag `--bolsines.reset-on-start=true`.
+11. **¿Por qué `CambioEstadoBolsin` y `CambioEstadoDocumentacion` tienen constructores de 3 parámetros y se persiste el responsable con `ResponsableConverter` (Desviación D1)?**  
+    En el diagrama de secuencia E2 los mensajes de instanciación `new` pasan exactamente 3 parámetros: `(fechaHoraActual, empleadoLogueado, estado)`, dejando `fechaHoraFin` en `null` ya que el cambio nace vigente. En el código se agregaron constructores específicos con esa firma para las transiciones de dominio (`crearCambioEstadoBolsin` y `crearCambioEstado`). El constructor de 4 parámetros se reserva exclusivamente para cargar datos históricos en `DataLoader` y pruebas. Asimismo, para persistir el `String[]` (orden `[nombre, apellido]`) respetando el tipo del modelado sin crear tablas intermedias, se implementó `ResponsableConverter` serializando en formato `"nombre|apellido"` (ej. `"Carlos|Gómez"`) en una columna `VARCHAR(200)` (con la limitación técnica de que el delimitador `"|"` rompería la lectura si formara parte del nombre o apellido).
 
