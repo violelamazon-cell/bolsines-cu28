@@ -557,7 +557,7 @@
       const data = await res.json();
       const comisiones = Array.isArray(data) ? data : (data?.comisiones || []);
 
-      el.filtroCmOrigen.innerHTML = '<option value="">Todas las comisiones</option>';
+      el.filtroCmOrigen.innerHTML = '<option value="">Todas</option>';
       comisiones.forEach(cm => {
         const nombre = typeof cm === 'string' ? cm : (cm?.nombre ?? cm?.nombreCm ?? '');
         if (nombre) {
@@ -568,7 +568,7 @@
         }
       });
     } catch (_) {
-      el.filtroCmOrigen.innerHTML = '<option value="">Todas las comisiones</option>';
+      el.filtroCmOrigen.innerHTML = '<option value="">Todas</option>';
     }
   }
 

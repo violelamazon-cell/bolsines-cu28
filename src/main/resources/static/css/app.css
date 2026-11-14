@@ -1093,6 +1093,12 @@ body {
   min-width: 0;
 }
 
+/* El campo CM de origen necesita espacio para mostrar el texto completo */
+.filtro-field:has(select) {
+  flex: 1 1 260px;
+  min-width: 240px;
+}
+
 .filtro-field label {
   font-size: 0.85rem;
   font-weight: 600;
@@ -1111,10 +1117,19 @@ body {
   width: 100%;
   box-sizing: border-box;
   font-size: 0.875rem;
+  font-family: inherit;
   line-height: 1.5;
-  padding-top: 0.45rem;
-  padding-bottom: 0.45rem;
+  padding: 0.45rem 0.75rem !important;
   background-color: #FFFFFF;
+  border: 1px solid var(--app-border);
+  border-radius: var(--pico-border-radius);
+  color: var(--app-text);
+}
+
+/* Espacio para la flecha del select (Pico usa background SVG con appearance:none) */
+.filtro-field select {
+  padding-right: 2.25rem !important;
+  min-width: 0;
 }
 
 .filtro-actions {
