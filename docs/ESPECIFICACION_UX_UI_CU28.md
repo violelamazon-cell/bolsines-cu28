@@ -28,21 +28,25 @@
 - Hacer fácil el **control visual** contra el bolsín físico (tipo de documentación, asunto, cantidad por remito).
 - Nunca dejarlo sin saber qué pasó: feedback explícito en cada resultado.
 
-### 1.1 Artefactos de descubrimiento del grupo — COMPLETAR
+### 1.1 Artefactos de descubrimiento del grupo
 
-> El grupo trabajó en clase mapas de empatía, journey y mood board. Pegar acá un resumen **breve** de cada uno para que el diseño final sea trazable a ellos (la cátedra pide defenderlo).
+> Resumen de los artefactos trabajados en clase (mapa de empatía y mood board) para garantizar la trazabilidad entre el descubrimiento y las decisiones de diseño de interfaz (evaluado en la defensa oral).
 
-**Mapa de empatía (resumen):**
-- Piensa y siente: `COMPLETAR`
-- Ve: `COMPLETAR`
-- Dice y hace: `COMPLETAR`
-- Escucha: `COMPLETAR`
-- Dolores: `COMPLETAR`
-- Ganancias/necesidades: `COMPLETAR`
+**Mapa de empatía (resumen del usuario Ernesto Valencia, 42 años, Encargado de Bolsines):**
+- **Piensa y siente:** Gran responsabilidad por el resguardo documental ("Detrás de cada sobre hay un trámite o dictamen de una persona real; no puedo permitirme perder un expediente"). Tensión ante precintos dañados o demoras del correo. Inseguridad al cotejar el contenido físico contra los remitos digitales.
+- **Ve:** Bolsines de lona azul que llegan a primera hora, precintos plásticos numerados de seguridad, remitos impresos, pilas de legajos, expedientes médicos y biblioratos de archivo.
+- **Dice y hace:** Recibe los bolsines del correo, verifica y corta el precinto de seguridad numerado, coteja remito por remito y documento por documento garantizando la trazabilidad física y digital de cada envío.
+- **Escucha / Influencias:** Prejuicios sobre sistemas de gestión ("seguro es un sistema feo y lento con 20 clics para un simple registro", "me va a quitar tiempo frente a la pantalla").
+- **Dolores:** Reprocesos manuales por inconsistencias en el envío; frustración ante interfaces confusas; temor al error humano involuntario en la carga de números de precinto o remito.
+- **Ganancias / Necesidades:** Certeza inmediata (confirmar la recepción conforme en pocos clics), trazabilidad transparente (registro fehaciente de fecha, hora y responsable), e interfaces limpias e intuitivas que prevengan errores operativos.
 
 **Journey del usuario (etapas, emociones y oportunidades):** `COMPLETAR`
 
-**Mood board (palabras clave, sensaciones, referencias visuales):** `COMPLETAR`
+**Mood board (palabras clave, sensaciones, referencias visuales):**
+- **Lema central:** *"Trazabilidad transparente, documentación protegida."*
+- **Sensaciones:** Custodia pública, precisión logística, sobriedad, orden institucional, confiabilidad y tranquilidad operativa.
+- **Referencias visuales:** Bolsines postales de lona azul, sobres con bordes aéreos y sellos de correspondencia, carpetas biblioratos de archivo, mapas de ruteo y seguimiento con pines de entrega, casilleros de clasificación y buzones postales.
+- **Identidad cromática:** Azul postal institucional (`#0B5CAD`) como color primario de confianza y estabilidad; amarillo de correspondencia (`#F2B705`) para acentos y estados de avance; superficies neutras de archivo (`#F4F6F9`, `#FFFFFF`, `#D5DBE3`) de alto contraste y descanso visual.
 
 > **Instrucción para el agente:** si estas secciones están completas, las decisiones visuales de las secciones 2 a 6 deben reflejar y mencionar explícitamente esos hallazgos en `docs/GUIA_DEFENSA.md` (tabla "hallazgo de descubrimiento → decisión de UI"). Si siguen en `COMPLETAR`, usá las propuestas de este documento y dejá la tabla armada con filas vacías para que el grupo la complete.
 
