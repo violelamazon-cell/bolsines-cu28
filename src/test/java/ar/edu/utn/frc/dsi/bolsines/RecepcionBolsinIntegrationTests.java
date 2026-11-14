@@ -312,5 +312,49 @@ class RecepcionBolsinIntegrationTests {
                     );
                 });
     }
+
+    // =========================================================================
+    // Manejo de errores de conversión y formato (400 Bad Request)
+    // =========================================================================
+
+    @Test
+    @DisplayName("GET /api/recepcion-bolsin/bolsines?numeroPrecinto=abc -> 400 con mensaje")
+    void filtrarBolsines_precintoConLetras_devuelve400() throws Exception {
+        mockMvc.perform(get("/api/recepcion-bolsin/bolsines")
+                        .header("X-Empleado-Id", EMP_CORDOBA)
+                        .param("numeroPrecinto", "abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("El valor ingresado para 'numeroPrecinto' no es válido."));
+    }
+
+    @Test
+    @DisplayName("GET /api/recepcion-bolsin/bolsines?numeroPrecinto=99999999999 -> 400 con mensaje")
+    void filtrarBolsines_precintoEnorme_devuelve400() throws Exception {
+        mockMvc.perform(get("/api/recepcion-bolsin/bolsines")
+                        .header("X-Empleado-Id", EMP_CORDOBA)
+                        .param("numeroPrecinto", "99999999999"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("El valor ingresado para 'numeroPrecinto' no es válido."));
+    }
+
+    @Test
+    @DisplayName("POST /api/recepcion-bolsin/iniciar con X-Empleado-Id=abc -> 400 con mensaje")
+    void iniciar_empleadoIdConLetras_devuelve400() throws Exception {
+        mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
+                        .header("X-Empleado-Id", "abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("El valor ingresado para 'X-Empleado-Id' no es válido."));
+    }
+
+    @Test
+    @DisplayName("POST /api/recepcion-bolsin/confirmar con body vacío -> 400 con mensaje")
+    void confirmar_bodyVacio_devuelve400() throws Exception {
+        mockMvc.perform(post("/api/recepcion-bolsin/confirmar")
+                        .header("X-Empleado-Id", EMP_CORDOBA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("La solicitud tiene un formato inválido o está vacía."));
+    }
 }
 
