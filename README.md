@@ -1,161 +1,219 @@
-# Sistema de Gestión de Bolsines - CU 28: "Registrar recepción de bolsín"
+# Bolsines – CU 28: Registrar recepción de bolsín
 
-Proyecto Práctico de Aplicación Integrador (PPAI)  
-**Cátedra:** Diseño de Sistemas de Información (DSI) – UTN Facultad Regional Córdoba (FRC) – 2026  
-**Curso:** 3K5 – **Grupo:** 8
+Trabajo Práctico Integrador (PPAI) – **Diseño de Sistemas de Información**
+UTN Facultad Regional Córdoba – 2026 – Curso **3K5** – **Grupo 8**
 
+**Integrantes:**
+
+| Legajo | Apellido y nombre | Email |
+|:--:|:---|:---|
+| 95763 | Bocek, Bruno | bocekbruno@gmail.com |
+| 401675 | Diaz, Lautaro Nicolas | launikd@gmail.com |
+| 407594 | Diaz Nievas, Fabricio | diaznievasfabricio@gmail.com |
+| 400476 | Farfan, Gonzalo | farfangonza8@gmail.com |
+| 409247 | Lamazón, Violeta | violelamazon@gmail.com |
+| 409518 | Oberto, Oliver | oliveroberto6@gmail.com |
+| 81994 | Pino Videla, Carlos Emanuel | emanuelpino42@gmail.com |
 ---
 
-## 1. Descripción del Proyecto
+## 1. De qué se trata
 
-Implementación completa del **Caso de Uso 28: "Registrar recepción de bolsín"** correspondiente al sistema de correspondencia y expedientes de Comisiones Médicas. El sistema permite al Encargado de Bolsines registrar la llegada física de un bolsín postal, verificar los remitos y documentaciones que transporta, actualizar polimórficamente los estados mediante el **Patrón State (GoF)**, y disparar las notificaciones por correo a las Comisiones Médicas de origen (CU 29 simulado).
+El sistema permite al **Encargado de Bolsines** de una Comisión Médica registrar la llegada física de un bolsín postal: ve los bolsines que le fueron enviados, revisa los remitos y la documentación que contienen, confirma la recepción y el sistema actualiza los estados del bolsín, de sus remitos y de cada documentación, y notifica a las comisiones médicas de origen (CU 29, simulado).
 
----
+El cambio de estado de la **Documentación** está implementado con el **patrón State (GoF)**, tal como se diseñó en la Entrega 2.
 
-## 2. Tecnologías y Stack
+## 2. Qué está implementado
 
-* **Lenguaje:** Java 17+ (compatible con JDK 25)
-* **Framework Backend:** Spring Boot 3.5.16 (`spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-validation`, `spring-boot-starter-test`)
-* **Persistencia:** JPA / Hibernate con base de datos H2 en modo archivo (`./data/bolsines.mv.db`)
-* **Patrón de Diseño GoF:** **Patrón State** aplicado sobre la clase `Documentacion` (transiciones sin `if/switch`)
-* **Patrón GRASP:** Experto en Información y Controlador (`GestorRecepcionBolsin`)
-* **Frontend:** Single Page Application (SPA) con HTML5 semántico, CSS3 nativo sobre framework utilitario Pico.css (distribuido localmente sin CDN ni conexión a internet) y JavaScript moderno (ES6+ Vanilla sin frameworks)
-* **Build tool:** Apache Maven con Maven Wrapper (`mvnw`)
-* **Calidad y Principios:** Sin Lombok (código Java explícito), sin dependencias externas ni credenciales hardcodeadas
+| Flujo | Estado |
+|---|---|
+| Flujo principal (recepción completa del bolsín, opción 1) | Implementado |
+| A1 – No se encuentra el precinto ingresado | Implementado |
+| A2 – No se encuentra la comisión médica de origen ingresada | Implementado |
+| A6 – El usuario no confirma la recepción | Implementado |
+| Cancelar el caso de uso | Implementado |
+| Opciones de recepción 2, 3 y 4 (A3, A4, A5) | No implementadas. En pantalla aparecen como "Próximamente" y la API responde 501 |
 
----
+## 3. Tecnologías
 
-## 3. Requisitos de Ejecución
+| Aspecto | Tecnología |
+|---|---|
+| Lenguaje | Java 17 |
+| Framework | Spring Boot 3.5.16 (Web, Data JPA, Validation) |
+| Tipo de aplicación | Web: API REST + frontend estático servido por el mismo Spring Boot |
+| Base de datos | H2 en modo archivo (`./data/bolsines.mv.db`) |
+| Persistencia | JPA / Hibernate |
+| Frontend | HTML5, CSS3 y JavaScript sin frameworks, con Pico.css incluido localmente (no requiere internet) |
+| Build | Maven con Maven Wrapper (`mvnw`) |
+| Patrón de diseño | State (sobre `Documentacion`) |
+| Patrones GRASP | Experto y Controlador (`GestorRecepcionBolsin`) |
+| Pruebas | JUnit 5 y MockMvc |
 
-* **JDK 17 o superior** instalado y configurado en la variable de entorno `JAVA_HOME` y `PATH`.
-* Conexión a internet **no requerida** para la ejecución (todas las dependencias y estilos están empaquetados localmente).
+No usa Lombok, servicios externos ni credenciales.
 
----
+## 4. Requisitos
 
-## 4. Instrucciones para Ejecutar la Aplicación
+- **JDK 17 o superior** (`java -version` para comprobarlo).
+- No hace falta instalar Maven: el proyecto incluye el wrapper.
+- No hace falta conexión a internet para ejecutar la aplicación (la primera vez, Maven descarga las dependencias).
 
-### 4.1 Iniciar el servidor
+## 5. Cómo ejecutar
 
-Abrir una consola (PowerShell o CMD) en la raíz del repositorio (`c:\Users\Violeta\bolsines-cu28`) y ejecutar:
+Desde la raíz del repositorio:
 
+**Windows (PowerShell o CMD)**
 ```powershell
 .\mvnw spring-boot:run
 ```
 
-En sistemas Linux / macOS:
+**Linux / macOS**
 ```bash
 ./mvnw spring-boot:run
 ```
 
-### 4.2 Acceder a la Interfaz Web
+Cuando la consola muestre `Started BolsinesApplication`:
 
-Una vez que la consola indique `Started BolsinesApplication`:
+- **Aplicación:** <http://localhost:8080>
+- **Consola de la base de datos:** <http://localhost:8080/h2-console>
+  - JDBC URL: `jdbc:h2:file:./data/bolsines`
+  - User Name: `sa`
+  - Password: *(vacía)*
 
-* **Aplicación Web:** [http://localhost:8080](http://localhost:8080)
-* **Consola de Base de Datos H2:** [http://localhost:8080/h2-console](http://localhost:8080/h2-console)
-  * **Driver Class:** `org.h2.Driver`
-  * **JDBC URL:** `jdbc:h2:file:./data/bolsines`
-  * **User Name:** `sa`
-  * **Password:** *(dejar en blanco)*
+La primera vez que arranca, crea las tablas y carga los datos de prueba. Si se reinicia sin borrar la carpeta `data`, los datos se conservan y no se duplican.
 
----
+## 6. Usuarios y datos de prueba
 
-## 5. Datos Semilla y Usuarios de Prueba
+La pantalla inicial es un **login simulado**: se elige un empleado con su tarjeta (no hay contraseñas). Todos los empleados tienen el rol de **Encargado de Bolsines**.
 
-La base de datos se inicializa automáticamente al primer arranque mediante `DataLoader` ([src/main/java/ar/edu/utn/frc/dsi/bolsines/config/DataLoader.java](file:///c:/Users/Violeta/bolsines-cu28/src/main/java/ar/edu/utn/frc/dsi/bolsines/config/DataLoader.java)):
+| Empleado | Comisión Médica | Para probar |
+|---|---|---|
+| **Carlos Gómez** | CM Córdoba | Tiene 3 bolsines pendientes: es el usuario de la demo |
+| Ana Martínez | CM Mendoza | No ve los bolsines de Córdoba (el 1004 es suyo) |
+| Roberto Rossi | CMC Buenos Aires (central) | Comisión central, sin bolsines pendientes |
+| Laura Torres | CM Villa María | Sin bolsines pendientes: muestra el estado vacío |
+| Martín Benítez | CM Rosario | Sin bolsines pendientes |
 
-### 5.1 Empleados Disponibles (Selector en Header)
+| Bolsín | Precinto | Origen → Destino | Estado inicial | Contenido |
+|---|---|---|---|---|
+| 1001 | 50001 | Mendoza → Córdoba | Enviado | 2 remitos, 3 documentaciones |
+| 1002 | 50002 | Rosario → Córdoba | Enviado | 1 remito, 2 documentaciones |
+| 1003 | 50003 | Villa María → Córdoba | Enviado | 2 remitos, 4 documentaciones |
+| 1004 | 50004 | Córdoba → Mendoza | Enviado | 1 remito, 1 documentación (no aparece para Carlos Gómez) |
+| 1005 | 50005 | Paraná → Córdoba | Recibido en CM destino | 1 remito, 1 documentación (no aparece en pendientes) |
 
-| ID | Empleado | Comisión Médica | Rol | Caso de prueba |
-|:--:|:---|:---|:---|:---|
-| **1** | **Carlos Gómez** | **CM Córdoba (CMJ-CBA)** | Encargado de Bolsines | **Usuario por defecto**. Cuenta con 3 bolsines pendientes listos para recibir (flujo principal). |
-| **2** | Ana Martínez | CM Mendoza (CMJ-MZA) | Encargada de Bolsines | Destino del bolsín 1004. Permite verificar que no ve los bolsines de Córdoba. |
-| **3** | Roberto Rossi | CMC Buenos Aires (CMC-CABA) | Encargado de Bolsines | Comisión central. |
-| **4** | Lucía Benítez | CM Villa María (CMJ-VM) | Encargada de Bolsines | **Demostración de Estado Vacío**: no tiene bolsines pendientes hacia su CM. |
+## 7. Recorrido sugerido de la demo
 
-### 5.2 Bolsines Iniciales Cargados
+1. Elegir a **Carlos Gómez** en la pantalla de login.
+2. **Flujo principal:** entrar a *Registrar recepción*, seleccionar el bolsín del precinto `50001`, revisar remitos y documentación, elegir "El contenido del bolsín es igual al registrado", confirmar y ver el resultado con las notificaciones. El bolsín deja de aparecer en la lista.
+3. **A1:** filtrar por un precinto inexistente (por ejemplo `99999`).
+4. **A2:** filtrar por una comisión médica de origen que no tenga bolsines.
+5. **A6:** llegar a la confirmación y elegir *No confirmar*: no cambia nada.
+6. **Cancelar:** volver desde cualquier paso con *Cancelar*.
+7. **Estado vacío:** cerrar sesión y entrar como Laura Torres.
 
-* **Bolsín 1001** (Precinto `50001`): Origen Mendoza → Destino Córdoba. Contiene 2 remitos y 3 documentaciones (Expedientes y Dictámenes).
-* **Bolsín 1002** (Precinto `50002`): Origen Rosario → Destino Córdoba. Contiene 1 remito y 2 documentaciones.
-* **Bolsín 1003** (Precinto `50003`): Origen Villa María → Destino Córdoba. Contiene 2 remitos y 4 documentaciones.
-* **Bolsín 1004** (Precinto `50004`): Origen Córdoba → Destino Mendoza (no visible para Carlos Gómez).
-* **Bolsín 1005** (Precinto `50005`): Origen Buenos Aires → Destino Córdoba, ya en estado *Recibido en CM destino* (no visible en pendientes).
+## 8. Cómo ver los cambios en la base de datos
 
----
+Después de confirmar una recepción, abrir la consola H2 y ejecutar:
 
-## 6. Cómo Reiniciar la Base de Datos
+```sql
+SELECT ID, DOCUMENTACION_ID, ESTADO, FECHA_HORA_INICIO, FECHA_HORA_FIN, RESPONSABLE_CE
+FROM CAMBIOS_ESTADO_DOCUMENTACION
+ORDER BY DOCUMENTACION_ID, ID;
+```
 
-Si durante una prueba o demo se recibieron los bolsines y se desea restaurar el estado inicial, existen dos alternativas:
+Para cada documentación del bolsín recibido se ve el estado anterior (*En bolsín enviado*) con su fecha de fin completa, y el estado nuevo (*Recibida y aceptada*) con `FECHA_HORA_FIN` en `NULL`. La columna `RESPONSABLE_CE` guarda al responsable con el formato `nombre|apellido`.
 
-### Opción A: Borrar el directorio `./data` (Recomendada)
-1. Detener la aplicación (`Ctrl + C` en la consola).
-2. Borrar la carpeta `data/` en la raíz del proyecto:
+## 9. Pruebas automáticas
+
+```powershell
+.\mvnw test
+```
+
+Ejecuta 39 pruebas: pruebas unitarias del dominio y del patrón State, pruebas del gestor con mocks y pruebas de integración de la API REST con MockMvc. El resultado esperado es `BUILD SUCCESS`.
+
+## 10. Cómo reiniciar los datos de prueba
+
+1. Detener la aplicación (`Ctrl + C`).
+2. Borrar la carpeta de datos:
    ```powershell
    Remove-Item -Recurse -Force .\data
    ```
-3. Volver a iniciar con `.\mvnw spring-boot:run`. El `DataLoader` volverá a sembrar la base de datos completa.
+3. Volver a ejecutar `.\mvnw spring-boot:run`. Se vuelven a crear las tablas y los datos.
 
-### Opción B: Parámetro de resiembra en el comando
-Iniciar la aplicación pasando la propiedad de reinicio:
-```powershell
-.\mvnw spring-boot:run -Dspring-boot.run.arguments=--bolsines.reset-on-start=true
-```
+## 11. API REST
 
----
+Todas las respuestas de error tienen la forma `{ "mensaje": "texto legible" }`.
 
-## 7. Estructura y Rutas Reales de Archivos
+| Método y ruta | Descripción |
+|---|---|
+| `GET /api/sesion/empleados` | Empleados disponibles para el login simulado |
+| `POST /api/sesion/iniciar` | Inicia la sesión simulada con un `empleadoId` |
+| `GET /api/sesion?empleadoId=` | Datos del usuario activo |
+| `GET /api/comisiones-medicas` | Catálogo para el filtro de origen |
+| `POST /api/recepcion-bolsin/iniciar` | Pasos 1 a 4: CM del usuario y bolsines enviados |
+| `GET /api/recepcion-bolsin/bolsines` | Filtro por precinto y CM de origen (A1 y A2) |
+| `POST /api/recepcion-bolsin/seleccionar-bolsin` | Remitos y documentación del bolsín |
+| `POST /api/recepcion-bolsin/seleccionar-recepcion` | Resumen de la opción de recepción elegida |
+| `POST /api/recepcion-bolsin/confirmar` | Registra la recepción (o A6 si `confirmado` es `false`) |
+| `POST /api/recepcion-bolsin/cancelar` | Cancela el caso de uso |
+
+Los endpoints de `/api/recepcion-bolsin` reciben el usuario activo en el encabezado `X-Empleado-Id`. Códigos de respuesta: `200`, `204`, `400` (datos inválidos), `404` (no se encontró lo pedido), `409` (llamada fuera de secuencia o transición inválida) y `501` (opción no implementada). En `requests.http` hay ejemplos listos para probar.
+
+## 12. Dónde está el patrón State
+
+| Rol | Clase |
+|---|---|
+| Contexto | `entidades/Documentacion.java` – `aceptar(...)` delega en el estado, sin `if` ni `switch` |
+| Estado (abstracta) | `entidades/estado/Estado.java` |
+| Estado concreto del CU | `entidades/estado/EnBolsinEnviado.java` – `aceptar(...)` sigue la secuencia del diagrama E2 y crea `RecibidaYAceptada` |
+| Persistencia del estado | `entidades/estado/EstadoConverter.java` (guarda el nombre del estado) |
+
+El responsable de cada cambio de estado viaja como `String[]` `[nombre, apellido]` y se guarda con `ResponsableConverter`.
+
+## 13. Estructura del proyecto
 
 ```
 bolsines-cu28/
-├── pom.xml                                     # Configuración de dependencias Maven
-├── README.md                                   # Guía general de instalación y ejecución
-├── data/                                       # Almacenamiento físico de base de datos H2
-├── docs/
-│   ├── DETALLES_IMPLEMENTACION.md             # Memoria técnica y arquitectura
-│   ├── DECISIONES.md                           # Registro de desviaciones D1 a D9
-│   ├── GUIA_DEFENSA.md                         # Guía oral de defensa y preguntas de examen
-│   ├── ESPECIFICACION_UX_UI_CU28.md            # Especificación de interfaz de usuario
-│   ├── PLAN_IMPLEMENTACION_CU28.md             # Plan general del caso de uso
-│   ├── mapaempatia.jpeg                        # Descubrimiento: Mapa de empatía
-│   └── moodboard.jpeg                          # Descubrimiento: Mood board institucional
+├── pom.xml
+├── mvnw, mvnw.cmd, .mvn/            # Maven Wrapper
+├── PLAN_IMPLEMENTACION_CU28.md      # Plan de implementación del caso de uso
+├── requests.http                    # Llamadas de prueba a la API
+├── README.md
+├── docs/                            # Documentación y diagramas
 ├── src/main/java/ar/edu/utn/frc/dsi/bolsines/
-│   ├── BolsinesApplication.java                # Punto de entrada Spring Boot
-│   ├── boundary/
-│   │   ├── PantallaRegistrarRecepcionBolsin.java # Boundary REST (@RestController)
-│   │   ├── SesionController.java               # Controlador de sesión simulada
-│   │   ├── ManejadorExcepciones.java           # @RestControllerAdvice (DTO Error)
-│   │   └── dto/                                # DTOs inmutables (Java records)
-│   ├── control/
-│   │   └── GestorRecepcionBolsin.java          # Controlador del CU (@Service)
-│   ├── entidades/
-│   │   ├── Bolsin.java                         # Entidad agregada Bolsin
-│   │   ├── Remito.java                         # Entidad Remito
-│   │   ├── DetalleRemito.java                  # Ítem del remito
-│   │   ├── Documentacion.java                  # Contexto del Patrón State
-│   │   ├── CambioEstadoDocumentacion.java      # Historial de cambios de documentación
-│   │   ├── CambioEstadoBolsin.java             # Historial de cambios de bolsín
-│   │   ├── ComisionMedica.java                 # Entidad Comisión Médica
-│   │   ├── Empleado.java                       # Entidad Empleado
-│   │   └── estado/                             # Jerarquía del Patrón State
-│   │       ├── Estado.java                     # Clase base abstracta
-│   │       ├── EnBolsinEnviado.java            # Estado concreto (origen CU 28)
-│   │       ├── RecibidaYAceptada.java          # Estado concreto (destino CU 28)
-│   │       └── EstadoConverter.java            # Converter JPA de persistencia
-│   ├── repositorios/                           # Interfaces Spring Data JPA
-│   ├── config/
-│   │   └── DataLoader.java                     # Semillero inicial de datos
-│   └── externos/
-│       ├── NotificadorEmail.java               # Interfaz del CU 29
-│       └── NotificadorEmailSimulado.java       # Implementación simulada del CU 29
+│   ├── BolsinesApplication.java
+│   ├── boundary/                    # Pantalla (REST), SesionController,
+│   │   │                            # ComisionMedicaController, ManejadorExcepciones
+│   │   ├── dto/                     # DTOs (records)
+│   │   └── excepciones/             # Excepciones de negocio de la API
+│   ├── control/                     # GestorRecepcionBolsin
+│   ├── entidades/                   # Bolsin, Remito, DetalleRemito, Documentacion,
+│   │   │                            # CambioEstadoBolsin, CambioEstadoDocumentacion,
+│   │   │                            # ComisionMedica, Empleado, TipoDocumento,
+│   │   │                            # EstadoBolsin, EstadoRemito, ResponsableConverter
+│   │   └── estado/                  # Patrón State: Estado, estados concretos y EstadoConverter
+│   ├── repositorios/                # Spring Data JPA
+│   ├── externos/                    # NotificadorEmail (CU 29) y su versión simulada
+│   └── config/                      # DataLoader (datos de prueba)
 ├── src/main/resources/
-│   ├── application.properties                  # Configuración de puerto, base H2 y JPA
-│   └── static/                                 # Frontend SPA
-│       ├── index.html                          # Vista HTML5 semántica
-│       ├── css/app.css                         # Estilos y variables CSS
-│       ├── css/pico.min.css                    # Framework Pico.css local
-│       └── js/app.js                           # Lógica del cliente SPA
-└── src/test/java/ar/edu/utn/frc/dsi/bolsines/
-    ├── entidades/DominioPuroTests.java         # Tests unitarios Fase 2 (POO y State puro)
-    ├── control/GestorRecepcionBolsinTests.java # Tests unitarios del Gestor con mocks
-    └── RecepcionBolsinIntegrationTests.java    # Tests de integración REST Fase 3 (MockMvc)
+│   ├── application.properties
+│   └── static/                      # Frontend: index.html, css/, js/
+└── src/test/java/...                # Pruebas unitarias y de integración
 ```
+
+## 14. Documentación
+
+| Archivo | Contenido |
+|---|---|
+| `docs/DETALLES_IMPLEMENTACION.md` | Lenguaje, framework, base de datos, persistencia y patrón aplicado |
+| `docs/DECISIONES.md` | Decisiones y desviaciones respecto de los diagramas (D1 a D15) |
+| `docs/GUIA_DEFENSA.md` | Guía para la defensa oral y preguntas probables |
+| `docs/ESPECIFICACION_UX_UI_CU28.md` | Especificación de la interfaz |
+| `docs/PPAI2026_3K5_G08_E1_Analisis.pdf` | Documento de análisis de la Entrega 1 |
+| `docs/PPAI2026_3K5_G08_E2_Diseño.pdf` | Documento de diseño y arquitectura de la Entrega 2 |
+| `docs/SECUENCIA E2.png`, `docs/DIAGRAMA DE CLASES E2.png` | Diagramas de la Entrega 2 |
+| `docs/secuenciaE1.png`, `docs/clasesE1.png`, `docs/maquinaEstadoE1.png` | Diagramas de la Entrega 1 |
+| `docs/caso bolsin con consignas completo.pdf` | Consigna completa del caso de uso |
+
+## 15. Desviaciones respecto de los diagramas
+
+Las diferencias entre el modelado y la implementación están registradas y justificadas en [`docs/DECISIONES.md`](docs/DECISIONES.md): la API REST y los DTOs en lugar de los mensajes `mostrar…`/`solicitar…`, el gestor sin estado, el login y el correo simulados, el responsable como `String[]`, entre otras.
