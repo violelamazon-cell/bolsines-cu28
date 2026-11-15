@@ -23,10 +23,12 @@ import java.util.stream.Collectors;
  * Desviación D8: El Gestor NO guarda estado entre llamadas HTTP (no hay campos
  * de instancia como bolsinSeleccionado ni opcionSeleccionada en el bean @Service).
  * Cada método recibe los identificadores necesarios (numeroBolsin, empleadoId),
- * garantizando la seguridad en concurrencia y adaptándose al modelo REST.
+ * garantizando la seguridad en concurrencia y adaptándose al modelo REST. La vista
+ * estática E2 debe reflejar esta decisión y quitar esos atributos del Gestor.
  *
  * Desviación D9: Si la notificación de correo (CU 29) falla, la recepción física
- * y documental ya persistida NO se revierte.
+ * y documental no se revierte por ese fallo: la excepción se captura dentro del
+ * método @Transactional y la transacción puede confirmar al finalizar normalmente.
  */
 @Service
 public class GestorRecepcionBolsin {
@@ -394,7 +396,10 @@ public class GestorRecepcionBolsin {
 
     /**
      * CU 28 Paso 12: Notifica a cada Comisión Médica de origen que aportó documentación.
-     * Si ocurre un error de envío (CU 29), se captura y loguea para no revertir la recepción (D9).
+     * Si ocurre un error de envío (CU 29), se captura y loguea. Como este método
+     * se invoca dentro de la transacción de tomarConfirmacion, la recepción no se
+     * confirma antes de notificar; la transacción puede confirmar cuando termine
+     * normalmente el método transaccional (D9).
      */
     public List<NotificacionDto> llamarCU29NotificarRecepcionDeBolsin(Bolsin bolsin) {
         List<NotificacionDto> notificaciones = new ArrayList<>();
@@ -422,7 +427,7 @@ public class GestorRecepcionBolsin {
                     n.asunto()
                 ));
             } catch (Exception e) {
-                log.error("CU 29: Error al enviar notificación a {} ({}). La recepción no se revierte.",
+                log.error("CU 29: Error al enviar notificación a {} ({}). El error fue capturado; la transacción de recepción puede confirmar al finalizar.",
                         origen.getNombre(), origen.getEmail(), e);
             }
         }

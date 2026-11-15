@@ -120,7 +120,7 @@ public class Remito {
      * y propaga la actualización a sus renglones de documentación.
      */
     public void recibirYAceptar(EstadoRemito nuevoEstado, LocalDateTime fechaHoraActual, String[] responsable) {
-        this.estado = nuevoEstado;
+        setEstado(nuevoEstado);
         recibirYAceptarDocumentacion(fechaHoraActual, responsable);
     }
 
