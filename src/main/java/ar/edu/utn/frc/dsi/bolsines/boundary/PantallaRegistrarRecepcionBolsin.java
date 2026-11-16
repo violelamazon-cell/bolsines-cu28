@@ -42,6 +42,18 @@ public class PantallaRegistrarRecepcionBolsin {
     }
 
     /**
+     * Consulta de solo lectura: retorna la cantidad de bolsines pendientes
+     * para la Comisión Médica del usuario logueado, sin iniciar el CU ni alterar el Gestor.
+     *
+     * GET /api/recepcion-bolsin/pendientes
+     */
+    @GetMapping("/pendientes")
+    public ResponseEntity<BolsinesPendientesDto> obtenerCantidadPendientes() {
+        int cantidad = consultasService.contarBolsinesPendientes();
+        return ResponseEntity.ok(new BolsinesPendientesDto(cantidad));
+    }
+
+    /**
      * CU 28 Paso 4: Filtros de búsqueda (A1 y A2).
      *
      * GET /api/recepcion-bolsin/bolsines?numeroPrecinto=&cmOrigen=
