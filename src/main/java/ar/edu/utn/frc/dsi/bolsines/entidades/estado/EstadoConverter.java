@@ -5,9 +5,8 @@ import jakarta.persistence.Converter;
 
 /**
  * Convertidor JPA para persistir polimórficamente la jerarquía de Estado
- * como una cadena de texto (el nombre canónico del estado) en la base de datos.
- *
- * Evita la creación de tablas adicionales para estados sin atributos mutables.
+ * guardando el nombre simple de la clase (ej. "EnBolsinEnviado", "RecibidaYAceptada")
+ * en la base de datos.
  */
 @Converter
 public class EstadoConverter implements AttributeConverter<Estado, String> {
@@ -17,7 +16,7 @@ public class EstadoConverter implements AttributeConverter<Estado, String> {
         if (estado == null) {
             return null;
         }
-        return estado.getNombre();
+        return estado.getClass().getSimpleName();
     }
 
     @Override
@@ -28,4 +27,3 @@ public class EstadoConverter implements AttributeConverter<Estado, String> {
         return EstadoFactory.porNombre(dbData);
     }
 }
-

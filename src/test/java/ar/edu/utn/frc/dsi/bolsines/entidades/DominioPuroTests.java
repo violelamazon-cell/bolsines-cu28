@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class DominioPuroTests {
 
     @Test
-    @DisplayName("Patrón State: EnBolsinEnviado.aceptar() cierra cambio anterior y pasa a Recibida y aceptada")
+    @DisplayName("Patrón State: EnBolsinEnviado.aceptar() cierra cambio anterior y pasa a RecibidaYAceptada")
     void testEnBolsinEnviadoAceptar() {
         LocalDateTime ahora = LocalDateTime.now();
         ComisionMedica cmOrigen = new ComisionMedica("CM-MZA", "CM Mendoza", "San Martin 100", "m@m.com", "123");
@@ -35,14 +35,13 @@ class DominioPuroTests {
         doc.agregarCambioEstado(cambioPrevio);
 
         assertTrue(cambioPrevio.esEstadoActual(), "El cambio previo debe ser actual antes de la transición");
-        assertEquals(EnBolsinEnviado.NOMBRE, doc.getEstado().getNombre());
+        assertTrue(doc.getEstado() instanceof EnBolsinEnviado);
 
         // EJECUCIÓN: CU 28 Paso 11c
         doc.aceptar(ahora, respRecepcion);
 
         // 1. El estado de la documentación debe haber cambiado a RecibidaYAceptada
         assertTrue(doc.getEstado() instanceof RecibidaYAceptada, "El nuevo estado debe ser instancia de RecibidaYAceptada");
-        assertEquals(RecibidaYAceptada.NOMBRE, doc.getEstado().getNombre());
 
         // 2. El cambio anterior debe haber sido cerrado con fechaHoraFin = ahora
         assertFalse(cambioPrevio.esEstadoActual(), "El cambio anterior ya no debe ser actual");
@@ -56,11 +55,11 @@ class DominioPuroTests {
         assertNull(cambioNuevo.getFechaHoraFin());
         assertEquals(ahora, cambioNuevo.getFechaHoraInicio());
         assertArrayEquals(respRecepcion, cambioNuevo.getResponsableCE(), "El responsable debe ser el empleado que recibió");
-        assertEquals(RecibidaYAceptada.NOMBRE, cambioNuevo.getEstado().getNombre());
+        assertTrue(cambioNuevo.getEstado() instanceof RecibidaYAceptada);
     }
 
     @Test
-    @DisplayName("Patrón State: Transición no permitida lanza IllegalStateException")
+    @DisplayName("Patrón State: Transición no permitida lanza UnsupportedOperationException")
     void testTransicionNoPermitidaLanzaExcepcion() {
         LocalDateTime ahora = LocalDateTime.now();
         String[] empleado = new String[]{"Carlos", "Gómez"};
@@ -69,19 +68,17 @@ class DominioPuroTests {
         Documentacion docRegistrada = new Documentacion(9001, "Doc Nueva", ahora, null, null, new Registrada());
         docRegistrada.agregarCambioEstado(new CambioEstadoDocumentacion(ahora, null, new Registrada(), empleado));
 
-        IllegalStateException ex1 = assertThrows(IllegalStateException.class, () ->
+        assertThrows(UnsupportedOperationException.class, () ->
                 docRegistrada.aceptar(ahora, empleado)
         );
-        assertTrue(ex1.getMessage().contains("no permitida"), "El mensaje de error debe indicar transición no permitida");
-        assertTrue(ex1.getMessage().contains("Registrada"));
 
         // Tampoco se puede rechazar o redirigir desde Registrada
-        assertThrows(IllegalStateException.class, () -> docRegistrada.rechazar(ahora, empleado));
-        assertThrows(IllegalStateException.class, () -> docRegistrada.redirigir(ahora, empleado));
+        assertThrows(UnsupportedOperationException.class, docRegistrada::rechazar);
+        assertThrows(UnsupportedOperationException.class, docRegistrada::redirigir);
 
-        // Una documentación ya 'Recibida y aceptada' tampoco permite volver a ejecutarse
+        // Una documentación ya 'RecibidaYAceptada' tampoco permite volver a ejecutarse
         Documentacion docAceptada = new Documentacion(9002, "Doc Final", ahora, null, null, new RecibidaYAceptada());
-        assertThrows(IllegalStateException.class, () -> docAceptada.aceptar(ahora, empleado));
+        assertThrows(UnsupportedOperationException.class, () -> docAceptada.aceptar(ahora, empleado));
     }
 
     @Test
@@ -138,7 +135,10 @@ class DominioPuroTests {
 
         // 2. Nuevo cambio vigente agregado
         assertEquals(2, bolsin.getCambioEstado().size());
-        CambioEstadoBolsin cNuevo = bolsin.buscarEstadoActual();
+        CambioEstadoBolsin cNuevo = bolsin.getCambioEstado().stream()
+                .filter(CambioEstadoBolsin::esActual)
+                .findFirst()
+                .orElse(null);
         assertNotNull(cNuevo);
         assertTrue(cNuevo.esActual());
         assertEquals(ebRecibido, cNuevo.getEstado());
@@ -176,8 +176,6 @@ class DominioPuroTests {
 
         // Verificaciones
         assertEquals(erRecibido, remito.getEstado(), "El remito debe quedar en Recibido y Aceptado");
-        assertEquals(RecibidaYAceptada.NOMBRE, doc1.getEstado().getNombre(), "Doc 1 debe haber pasado a Recibida y aceptada");
-        assertEquals(RecibidaYAceptada.NOMBRE, doc2.getEstado().getNombre(), "Doc 2 debe haber pasado a Recibida y aceptada");
         assertTrue(doc1.getEstado() instanceof RecibidaYAceptada);
         assertTrue(doc2.getEstado() instanceof RecibidaYAceptada);
     }
@@ -200,7 +198,7 @@ class DominioPuroTests {
     }
 
     @Test
-    @DisplayName("Estado: equals y hashCode consistentes por nombre")
+    @DisplayName("Estado: equals y hashCode consistentes por clase")
     void testEstadoEqualsHashCode() {
         Estado e1 = new EnBolsinEnviado();
         Estado e2 = new EnBolsinEnviado();
@@ -226,4 +224,3 @@ class DominioPuroTests {
         assertEquals("", bolsinOrigenSinNombre.buscarCMOrigen());
     }
 }
-

@@ -14,10 +14,7 @@ import java.util.List;
  */
 public class EnBolsinEnviado extends Estado {
 
-    public static final String NOMBRE = "En bolsín enviado";
-
     public EnBolsinEnviado() {
-        super(NOMBRE, "Documentación en tránsito en un bolsín enviado");
     }
 
     /**
@@ -33,32 +30,36 @@ public class EnBolsinEnviado extends Estado {
      */
     @Override
     public void aceptar(Documentacion doc, LocalDateTime ahora, String[] resp, List<CambioEstadoDocumentacion> cambios) {
-        // 1. actual = buscarEstadoActual(cambios)
         CambioEstadoDocumentacion actual = buscarEstadoActual(cambios);
-
-        // 2. actual.setFechaHoraFin(ahora)
         if (actual != null) {
             actual.setFechaHoraFin(ahora);
         }
-
-        // 3. nuevo = crearEstado()
         Estado nuevo = crearEstado();
-
-        // 4. cambioNuevo = crearCambioEstado(ahora, resp, nuevo)
         CambioEstadoDocumentacion cambioNuevo = crearCambioEstado(ahora, resp, nuevo);
-
-        // 5. doc.setEstado(nuevo)
         doc.setEstado(nuevo);
-
-        // 6. doc.agregarCambioEstado(cambioNuevo)
         doc.agregarCambioEstado(cambioNuevo);
     }
 
+    @Override
+    public void rechazar() {
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
+    }
+
+    @Override
+    public void redirigir() {
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
+    }
+
+    @Override
+    public void registrarNoRecepcion() {
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
+    }
+
     // =========================================================================
-    // Métodos privados modelados en el diagrama de clases y secuencia de E2
+    // Métodos de apoyo públicos modelados en el diagrama de clases y secuencia E2
     // =========================================================================
 
-    private CambioEstadoDocumentacion buscarEstadoActual(List<CambioEstadoDocumentacion> cambios) {
+    public CambioEstadoDocumentacion buscarEstadoActual(List<CambioEstadoDocumentacion> cambios) {
         if (cambios == null) return null;
         for (CambioEstadoDocumentacion c : cambios) {
             if (c.esEstadoActual()) {
@@ -68,12 +69,11 @@ public class EnBolsinEnviado extends Estado {
         return null;
     }
 
-    private Estado crearEstado() {
+    public Estado crearEstado() {
         return new RecibidaYAceptada();
     }
 
-    private CambioEstadoDocumentacion crearCambioEstado(LocalDateTime ahora, String[] resp, Estado nuevo) {
+    public CambioEstadoDocumentacion crearCambioEstado(LocalDateTime ahora, String[] resp, Estado nuevo) {
         return new CambioEstadoDocumentacion(ahora, resp, nuevo);
     }
 }
-

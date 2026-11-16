@@ -49,6 +49,7 @@ public class SesionController {
      */
     @PostMapping("/iniciar")
     public ResponseEntity<SesionDto> iniciarSesion(@RequestBody CambiarSesionRequest request) {
+        gestor.finCU();
         SesionDto sesion = gestor.getSesion(request.empleadoId());
         return ResponseEntity.ok(sesion);
     }

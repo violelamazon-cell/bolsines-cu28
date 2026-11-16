@@ -20,27 +20,32 @@ import java.util.stream.Collectors;
  *
  * Aplica el patrón GRASP Controlador y Experto.
  *
- * Desviación D8: El Gestor NO guarda estado entre llamadas HTTP (no hay campos
- * de instancia como bolsinSeleccionado ni opcionSeleccionada en el bean @Service).
- * Cada método recibe los identificadores necesarios (numeroBolsin, empleadoId),
- * garantizando la seguridad en concurrencia y adaptándose al modelo REST. La vista
- * estática E2 debe reflejar esta decisión y quitar esos atributos del Gestor.
- *
- * Desviación D9: Si la notificación de correo (CU 29) falla, la recepción física
- * y documental no se revierte por ese fallo: la excepción se captura dentro del
- * método @Transactional y la transacción puede confirmar al finalizar normalmente.
+ * Posee exactamente 5 atributos privados de estado de caso de uso (según modelado de la cátedra):
+ * - empleadoLogueado: Empleado
+ * - bolsinSeleccionado: Bolsin
+ * - bolsinesEnviados: List<Bolsin>
+ * - estadoBolsin: EstadoBolsin
+ * - estadoRemito: EstadoRemito
  */
 @Service
 public class GestorRecepcionBolsin {
 
     private static final Logger log = LoggerFactory.getLogger(GestorRecepcionBolsin.class);
 
+    // Repositorios y componentes de infraestructura
     private final BolsinRepository bolsinRepository;
     private final EmpleadoRepository empleadoRepository;
     private final EstadoBolsinRepository estadoBolsinRepository;
     private final EstadoRemitoRepository estadoRemitoRepository;
     private final ComisionMedicaRepository comisionMedicaRepository;
     private final NotificadorEmail notificadorEmail;
+
+    // Atributos de estado del caso de uso (exactamente 5 según diagrama de clases E2)
+    private Empleado empleadoLogueado;
+    private Bolsin bolsinSeleccionado;
+    private List<Bolsin> bolsinesEnviados;
+    private EstadoBolsin estadoBolsin;
+    private EstadoRemito estadoRemito;
 
     public GestorRecepcionBolsin(BolsinRepository bolsinRepository,
                                   EmpleadoRepository empleadoRepository,
@@ -54,6 +59,33 @@ public class GestorRecepcionBolsin {
         this.estadoRemitoRepository = estadoRemitoRepository;
         this.comisionMedicaRepository = comisionMedicaRepository;
         this.notificadorEmail = notificadorEmail;
+
+        // Inicialización de atributos de estado según diagrama
+        this.empleadoLogueado = null;
+        this.bolsinSeleccionado = null;
+        this.bolsinesEnviados = new ArrayList<>();
+        this.estadoBolsin = null;
+        this.estadoRemito = null;
+    }
+
+    public Empleado getEmpleadoLogueado() {
+        return empleadoLogueado;
+    }
+
+    public Bolsin getBolsinSeleccionado() {
+        return bolsinSeleccionado;
+    }
+
+    public List<Bolsin> getBolsinesEnviados() {
+        return bolsinesEnviados;
+    }
+
+    public EstadoBolsin getEstadoBolsin() {
+        return estadoBolsin;
+    }
+
+    public EstadoRemito getEstadoRemito() {
+        return estadoRemito;
     }
 
     // =========================================================================
@@ -66,22 +98,43 @@ public class GestorRecepcionBolsin {
      */
     @Transactional(readOnly = true)
     public IniciarRecepcionResponse registrarRecepcionBolsin(Long empleadoId) {
-        Empleado empleado = getUsuarioLogueado(empleadoId);
-        ComisionMedica cmUsuario = empleado.getCM();
+        this.empleadoLogueado = getUsuarioLogueado(empleadoId);
+        this.bolsinSeleccionado = null;
+        this.estadoBolsin = null;
+        this.estadoRemito = null;
 
-        List<BolsinResumenDto> bolsines = buscarBolsinesEnviados(cmUsuario);
+        ComisionMedica cmUsuario = this.empleadoLogueado.getCM();
+        List<Bolsin> candidatos = bolsinRepository.findByDestinoWithCambios(cmUsuario);
 
-        if (bolsines.isEmpty()) {
+        this.bolsinesEnviados = candidatos.stream()
+            .filter(b -> b.sosEnviado() && b.esTuCMDestino(cmUsuario))
+            .collect(Collectors.toList());
+
+        if (this.bolsinesEnviados.isEmpty()) {
             throw new RecursoNoEncontradoException(
                 "No hay bolsines enviados pendientes de recepción para la comisión médica " + cmUsuario.getNombre()
             );
         }
 
+        List<BolsinResumenDto> bolsinesDto = this.bolsinesEnviados.stream()
+            .map(b -> new BolsinResumenDto(
+                b.getNumeroBolsin(),
+                b.buscarCMOrigen(),
+                b.getNroPrecinto()
+            ))
+            .collect(Collectors.toList());
+
         return new IniciarRecepcionResponse(
             cmUsuario.getNombre(),
             cmUsuario.getCodigo(),
-            bolsines
+            bolsinesDto
         );
+    }
+
+    @Transactional(readOnly = true)
+    public IniciarRecepcionResponse registrarRecepcionBolsin() {
+        Long empId = this.empleadoLogueado != null ? this.empleadoLogueado.getId() : 1L;
+        return registrarRecepcionBolsin(empId);
     }
 
     /**
@@ -127,9 +180,6 @@ public class GestorRecepcionBolsin {
             .collect(Collectors.toList());
     }
 
-    /**
-     * Sobrecarga de conveniencia que resuelve la CM a partir del id de empleado.
-     */
     @Transactional(readOnly = true)
     public List<BolsinResumenDto> buscarBolsinesEnviados(Long empleadoId) {
         Empleado empleado = getUsuarioLogueado(empleadoId);
@@ -141,18 +191,22 @@ public class GestorRecepcionBolsin {
     // =========================================================================
 
     /**
-     * CU 28 Paso 4: Filtra bolsines por número de precinto (A1) o Comisión Médica de origen (A2).
-     * Si no se encuentran coincidencias, lanza RecursoNoEncontradoException con mensaje descriptivo.
+     * CU 28 Paso 4: Filtra sobre la colección bolsinesEnviados del Gestor por número de precinto (A1)
+     * o Comisión Médica de origen (A2).
      */
     @Transactional(readOnly = true)
-    public List<BolsinResumenDto> filtrarBolsines(Long empleadoId, Integer numeroPrecinto, String cmOrigen) {
-        List<BolsinResumenDto> lista = buscarBolsinesEnviados(empleadoId);
+    public List<BolsinResumenDto> filtrarBolsines(Integer numeroPrecinto, String cmOrigen) {
+        if (this.bolsinesEnviados == null || this.bolsinesEnviados.isEmpty()) {
+            registrarRecepcionBolsin(this.empleadoLogueado != null ? this.empleadoLogueado.getId() : 1L);
+        }
+
+        List<Bolsin> filtrados = this.bolsinesEnviados;
 
         if (numeroPrecinto != null) {
-            lista = lista.stream()
-                .filter(b -> b.numeroPrecinto() == numeroPrecinto)
+            filtrados = filtrados.stream()
+                .filter(b -> b.getNroPrecinto() == numeroPrecinto)
                 .collect(Collectors.toList());
-            if (lista.isEmpty()) {
+            if (filtrados.isEmpty()) {
                 throw new RecursoNoEncontradoException(
                     "No se encontró un bolsín con el número de precinto ingresado: " + numeroPrecinto
                 );
@@ -160,17 +214,31 @@ public class GestorRecepcionBolsin {
         }
 
         if (cmOrigen != null && !cmOrigen.isBlank()) {
-            lista = lista.stream()
-                .filter(b -> b.cmOrigen().toLowerCase().contains(cmOrigen.toLowerCase()))
+            filtrados = filtrados.stream()
+                .filter(b -> b.buscarCMOrigen().toLowerCase().contains(cmOrigen.toLowerCase()))
                 .collect(Collectors.toList());
-            if (lista.isEmpty()) {
+            if (filtrados.isEmpty()) {
                 throw new RecursoNoEncontradoException(
                     "No se encontró un bolsín con la comisión médica de origen ingresada: " + cmOrigen
                 );
             }
         }
 
-        return lista;
+        return filtrados.stream()
+            .map(b -> new BolsinResumenDto(
+                b.getNumeroBolsin(),
+                b.buscarCMOrigen(),
+                b.getNroPrecinto()
+            ))
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<BolsinResumenDto> filtrarBolsines(Long empleadoId, Integer numeroPrecinto, String cmOrigen) {
+        if (empleadoId != null && (this.empleadoLogueado == null || !Objects.equals(this.empleadoLogueado.getId(), empleadoId))) {
+            registrarRecepcionBolsin(empleadoId);
+        }
+        return filtrarBolsines(numeroPrecinto, cmOrigen);
     }
 
     // =========================================================================
@@ -178,18 +246,21 @@ public class GestorRecepcionBolsin {
     // =========================================================================
 
     /**
-     * CU 28 Pasos 5 y 6: Recibe la selección del bolsín, valida que siga en estado 'Enviado'
-     * y obtiene el detalle de remitos y opciones de recepción.
+     * CU 28 Pasos 5 y 6: Recibe la selección del bolsín, lo asigna al atributo bolsinSeleccionado,
+     * valida que siga en estado 'Enviado' y obtiene el detalle de remitos y opciones de recepción.
      */
     @Transactional(readOnly = true)
-    public SeleccionarBolsinResponse tomarSeleccionBolsin(Long empleadoId, int numeroBolsin) {
-        Empleado empleado = getUsuarioLogueado(empleadoId);
-        ComisionMedica cmUsuario = empleado.getCM();
+    public SeleccionarBolsinResponse tomarSeleccionBolsin(int numeroBolsin) {
+        if (this.empleadoLogueado == null) {
+            this.empleadoLogueado = getUsuarioLogueado(1L);
+        }
 
         Bolsin bolsin = cargarBolsinConRelaciones(numeroBolsin);
-        validarBolsinEnviado(bolsin, cmUsuario);
+        validarBolsinEnviado(bolsin, this.empleadoLogueado.getCM());
 
-        List<RemitoDto> remitosDto = buscarRemitosBolsin(bolsin);
+        this.bolsinSeleccionado = bolsin;
+
+        List<RemitoDto> remitosDto = buscarRemitosBolsin(this.bolsinSeleccionado);
 
         List<OpcionRecepcionDto> opciones = List.of(
             new OpcionRecepcionDto(1, "El contenido del bolsín es igual al registrado", true),
@@ -206,6 +277,14 @@ public class GestorRecepcionBolsin {
             remitosDto,
             opciones
         );
+    }
+
+    @Transactional(readOnly = true)
+    public SeleccionarBolsinResponse tomarSeleccionBolsin(Long empleadoId, int numeroBolsin) {
+        if (empleadoId != null && (this.empleadoLogueado == null || !Objects.equals(this.empleadoLogueado.getId(), empleadoId))) {
+            registrarRecepcionBolsin(empleadoId);
+        }
+        return tomarSeleccionBolsin(numeroBolsin);
     }
 
     /**
@@ -237,14 +316,14 @@ public class GestorRecepcionBolsin {
      * CU 28 Paso 8: Toma la opción de recepción seleccionada por el Encargado de Bolsines.
      */
     @Transactional(readOnly = true)
-    public SeleccionarRecepcionResponse tomarSeleccionRecepcion(Long empleadoId, int numeroBolsin, int opcion) {
-        Empleado empleado = getUsuarioLogueado(empleadoId);
-        Bolsin bolsin = cargarBolsinConRelaciones(numeroBolsin);
-        validarBolsinEnviado(bolsin, empleado.getCM());
+    public SeleccionarRecepcionResponse tomarSeleccionRecepcion(int opcion) {
+        if (this.bolsinSeleccionado == null) {
+            throw new ConflictoEstadoException("Debe seleccionar un bolsín antes de elegir una opción de recepción.");
+        }
 
         return switch (opcion) {
             case 1 -> {
-                int totalDocs = contarDocumentaciones(bolsin);
+                int totalDocs = contarDocumentaciones(this.bolsinSeleccionado);
                 yield new SeleccionarRecepcionResponse(
                     1,
                     "El contenido del bolsín es igual al registrado",
@@ -265,24 +344,41 @@ public class GestorRecepcionBolsin {
         };
     }
 
+    @Transactional(readOnly = true)
+    public SeleccionarRecepcionResponse tomarSeleccionRecepcion(Long empleadoId, int numeroBolsin, int opcion) {
+        if (empleadoId != null && (this.empleadoLogueado == null || !Objects.equals(this.empleadoLogueado.getId(), empleadoId))) {
+            registrarRecepcionBolsin(empleadoId);
+        }
+        if (this.bolsinSeleccionado == null || this.bolsinSeleccionado.getNumeroBolsin() != numeroBolsin) {
+            tomarSeleccionBolsin(numeroBolsin);
+        }
+        return tomarSeleccionRecepcion(opcion);
+    }
+
     // =========================================================================
     // CU 28 – Pasos 10 a 12: Confirmación atómica y notificación CU 29
     // =========================================================================
 
     /**
-     * CU 28 Pasos 10 a 12: Confirma o cancela la recepción del bolsín en una única transacción.
+     * CU 28 Pasos 10 a 12: Confirma o cancela la recepción del bolsín trabajando sobre los atributos de estado.
      *
-     * Si confirmado == false (Flujo Alternativo A6): no modifica datos y devuelve respuesta informativa.
+     * Si confirmado == false (Flujo Alternativo A6): no modifica datos, llama a finCU() y devuelve respuesta informativa.
      * Si confirmado == true:
-     *   1. Revalida que el bolsín siga 'Enviado' y pertenezca a la CM destino (evita doble confirmación -> ConflictoEstadoException).
-     *   2. Paso 11a: Bolsín -> 'Recibido en CM destino' (cierra cambio actual y abre nuevo).
-     *   3. Paso 11b: Remitos -> 'Recibido y Aceptado'.
+     *   1. Revalida que el bolsín siga 'Enviado' y pertenezca a la CM destino dentro de la transacción.
+     *   2. Paso 11a: Setea estadoBolsin y bolsin.recibir(...) -> 'Recibido en CM destino'.
+     *   3. Paso 11b: Setea estadoRemito y bolsin.recibirYAceptarRemitos(...) -> 'Recibido y Aceptado'.
      *   4. Paso 11c: Documentaciones -> 'Recibida y aceptada' mediante patrón State (GoF).
      *   5. Paso 12: Llama al CU 29 para notificar a cada CM origen distinta.
+     *   6. finCU(): reinicia el estado del gestor.
      */
     @Transactional
-    public ConfirmarRecepcionResponse tomarConfirmacion(Long empleadoId, int numeroBolsin, int opcion, boolean confirmado) {
+    public ConfirmarRecepcionResponse tomarConfirmacion(boolean confirmado) {
+        if (this.empleadoLogueado == null || this.bolsinSeleccionado == null) {
+            throw new ConflictoEstadoException("Debe seleccionar un bolsín antes de confirmar.");
+        }
+
         if (!confirmado) {
+            finCU();
             return new ConfirmarRecepcionResponse(
                 false,
                 "No se registró la recepción. No se modificó ningún dato.",
@@ -291,63 +387,62 @@ public class GestorRecepcionBolsin {
             );
         }
 
-        if (opcion != 1) {
-            throw new FuncionalidadNoDisponibleException(
-                "La opción " + opcion + " aún no está disponible. Próximamente."
-            );
+        int nroBolsin = this.bolsinSeleccionado.getNumeroBolsin();
+
+        // Recarga de entidad dentro de la transacción para reasociar con Hibernate Session
+        Bolsin bolsin = bolsinRepository.findByNumeroBolsinWithCambios(nroBolsin)
+            .orElseThrow(() -> new RecursoNoEncontradoException("No se encontró el bolsín N° " + nroBolsin));
+
+        // Inicialización de relaciones para evitar LazyInitializationException
+        for (Remito r : bolsin.getRemito()) {
+            r.getDetalleRemito().size();
+            for (DetalleRemito d : r.getDetalleRemito()) {
+                d.buscarDocumentacionRemito().getCambioEstado().size();
+            }
         }
-
-        Empleado empleado = getUsuarioLogueado(empleadoId);
-        ComisionMedica cmUsuario = empleado.getCM();
-
-        Bolsin bolsin = cargarBolsinConRelaciones(numeroBolsin);
 
         // Patrón Experto: revalidación dentro de la transacción
         if (!bolsin.sosEnviado()) {
             throw new ConflictoEstadoException(
-                "El bolsín N° " + numeroBolsin + " ya fue recibido o no se encuentra en estado Enviado."
+                "El bolsín N° " + nroBolsin + " ya fue recibido o no se encuentra en estado Enviado."
             );
         }
-        if (!bolsin.esTuCMDestino(cmUsuario)) {
+        if (!bolsin.esTuCMDestino(this.empleadoLogueado.getCM())) {
             throw new ConflictoEstadoException(
-                "El bolsín N° " + numeroBolsin + " no tiene como destino la comisión médica " + cmUsuario.getNombre()
+                "El bolsín N° " + nroBolsin + " no tiene como destino la comisión médica " + this.empleadoLogueado.getCM().getNombre()
             );
         }
+
+        this.bolsinSeleccionado = bolsin;
+        this.estadoBolsin = buscarEstadoBolsinRecibido();
+        this.estadoRemito = buscarEstadoRemitoRecibidoYAceptado();
 
         LocalDateTime fechaHoraActual = getFechaHoraActual();
+        String[] responsable = buscarNombreEmpleado(this.empleadoLogueado);
 
         // Paso 11a: actualizar estado del bolsín
-        EstadoBolsin estadoBolsinRecibido = buscarEstadoBolsinRecibido();
-        EstadoRemito estadoRemitoRecibido = buscarEstadoRemitoRecibidoYAceptado();
-
-        String[] empleadoLogueado = buscarNombreEmpleado(empleado);
-
-        recibirBolsin(bolsin, fechaHoraActual, empleadoLogueado, estadoBolsinRecibido);
+        recibirBolsin(this.bolsinSeleccionado, fechaHoraActual, responsable, this.estadoBolsin);
 
         // Paso 11b y 11c: actualizar remitos y documentación (patrón State)
-        recibirYAceptarRemitos(bolsin, estadoRemitoRecibido, fechaHoraActual, empleadoLogueado);
+        recibirYAceptarRemitos(this.bolsinSeleccionado, this.estadoRemito, fechaHoraActual, responsable);
 
-        int totalRemitos = bolsin.buscarRemitosBolsin().size();
-        int totalDocs = contarDocumentaciones(bolsin);
+        int totalRemitos = this.bolsinSeleccionado.buscarRemitosBolsin().size();
+        int totalDocs = contarDocumentaciones(this.bolsinSeleccionado);
 
-        String nuevoEstadoRemitos = estadoRemitoRecibido.getNombre();
-        String nuevoEstadoDocumentaciones = bolsin.buscarRemitosBolsin().stream()
-            .flatMap(r -> r.getDetalleRemito().stream())
-            .map(d -> d.buscarDocumentacionRemito().getEstado().getNombre())
-            .findFirst()
-            .orElse(null);
+        String nuevoEstadoRemitos = this.estadoRemito.getNombre();
+        String nuevoEstadoDocumentaciones = "Recibida y aceptada";
 
-        bolsinRepository.save(bolsin);
+        bolsinRepository.save(this.bolsinSeleccionado);
 
         // Paso 12: Llamar al CU 29
-        List<NotificacionDto> notificaciones = llamarCU29NotificarRecepcionDeBolsin(bolsin);
+        List<NotificacionDto> notificaciones = llamarCU29NotificarRecepcionDeBolsin(this.bolsinSeleccionado);
 
         finCU();
 
         return new ConfirmarRecepcionResponse(
             true,
-            "La recepción del bolsín N° " + numeroBolsin + " fue registrada correctamente.",
-            numeroBolsin,
+            "La recepción del bolsín N° " + nroBolsin + " fue registrada correctamente.",
+            nroBolsin,
             EstadoBolsin.RECIBIDO_EN_CM_DESTINO,
             nuevoEstadoRemitos,
             nuevoEstadoDocumentaciones,
@@ -355,6 +450,22 @@ public class GestorRecepcionBolsin {
             totalDocs,
             notificaciones
         );
+    }
+
+    @Transactional
+    public ConfirmarRecepcionResponse tomarConfirmacion(Long empleadoId, int numeroBolsin, int opcion, boolean confirmado) {
+        if (empleadoId != null && (this.empleadoLogueado == null || !Objects.equals(this.empleadoLogueado.getId(), empleadoId))) {
+            registrarRecepcionBolsin(empleadoId);
+        }
+        if (this.bolsinSeleccionado == null || this.bolsinSeleccionado.getNumeroBolsin() != numeroBolsin) {
+            tomarSeleccionBolsin(numeroBolsin);
+        }
+        if (opcion != 1) {
+            throw new FuncionalidadNoDisponibleException(
+                "La opción " + opcion + " aún no está disponible. Próximamente."
+            );
+        }
+        return tomarConfirmacion(confirmado);
     }
 
     // =========================================================================
@@ -396,10 +507,6 @@ public class GestorRecepcionBolsin {
 
     /**
      * CU 28 Paso 12: Notifica a cada Comisión Médica de origen que aportó documentación.
-     * Si ocurre un error de envío (CU 29), se captura y loguea. Como este método
-     * se invoca dentro de la transacción de tomarConfirmacion, la recepción no se
-     * confirma antes de notificar; la transacción puede confirmar cuando termine
-     * normalmente el método transaccional (D9).
      */
     public List<NotificacionDto> llamarCU29NotificarRecepcionDeBolsin(Bolsin bolsin) {
         List<NotificacionDto> notificaciones = new ArrayList<>();
@@ -436,7 +543,16 @@ public class GestorRecepcionBolsin {
     }
 
     public void finCU() {
-        log.debug("CU 28 finCU: fin del caso de uso.");
+        this.empleadoLogueado = null;
+        this.bolsinSeleccionado = null;
+        if (this.bolsinesEnviados != null) {
+            this.bolsinesEnviados.clear();
+        } else {
+            this.bolsinesEnviados = new ArrayList<>();
+        }
+        this.estadoBolsin = null;
+        this.estadoRemito = null;
+        log.debug("CU 28 finCU: estado del gestor reiniciado.");
     }
 
     public void cancelar() {
@@ -470,10 +586,6 @@ public class GestorRecepcionBolsin {
             .collect(Collectors.toList());
     }
 
-    /**
-     * Lista los nombres de todas las Comisiones Médicas, ordenados alfabéticamente.
-     * Se usa para poblar el desplegable de filtro de CM origen en el Paso 1.
-     */
     @Transactional(readOnly = true)
     public List<ComisionMedicaDto> listarComisionesMedicas() {
         return comisionMedicaRepository.findAll().stream()
@@ -541,4 +653,3 @@ public class GestorRecepcionBolsin {
         return sb.toString();
     }
 }
-

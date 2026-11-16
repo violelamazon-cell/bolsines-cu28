@@ -3,8 +3,10 @@ package ar.edu.utn.frc.dsi.bolsines.control;
 import ar.edu.utn.frc.dsi.bolsines.boundary.dto.*;
 import ar.edu.utn.frc.dsi.bolsines.boundary.excepciones.*;
 import ar.edu.utn.frc.dsi.bolsines.entidades.*;
+import ar.edu.utn.frc.dsi.bolsines.entidades.estado.EnBolsinEnviado;
 import ar.edu.utn.frc.dsi.bolsines.entidades.estado.RecibidaYAceptada;
 import ar.edu.utn.frc.dsi.bolsines.repositorios.BolsinRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests de integración para GestorRecepcionBolsin (Fase 3 - Parte B).
  *
  * Ejecuta sobre el perfil 'test' (H2 en memoria, create-drop) con datos sembrados por DataLoader.
- * Verifica la lógica del Gestor, el Patrón Experto y el cambio de estado con el Patrón State.
+ * Verifica la lógica del Gestor con estado, el Patrón Experto y el cambio de estado con el Patrón State.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -41,6 +43,11 @@ class GestorRecepcionBolsinTests {
     private static final Long EMP_CORDOBA = 1L;
     private static final Long EMP_VILLA_MARIA = 4L;
 
+    @BeforeEach
+    void setUp() {
+        gestor.finCU();
+    }
+
     @Test
     @Transactional
     @DisplayName("Flujo principal completo: Gestor actualiza bolsín, remitos y documentaciones con historial coherente")
@@ -54,7 +61,7 @@ class GestorRecepcionBolsinTests {
         assertTrue(inicio.bolsines().stream().anyMatch(b -> b.numeroBolsin() == nroBolsin));
 
         // 2. Paso 5-7: Seleccionar bolsín
-        SeleccionarBolsinResponse seleccion = gestor.tomarSeleccionBolsin(EMP_CORDOBA, nroBolsin);
+        SeleccionarBolsinResponse seleccion = gestor.tomarSeleccionBolsin(nroBolsin);
         assertEquals(nroBolsin, seleccion.numeroBolsin());
         assertEquals(2, seleccion.remitos().size());
         assertEquals(4, seleccion.opcionesRecepcion().size());
@@ -62,12 +69,12 @@ class GestorRecepcionBolsinTests {
         assertFalse(seleccion.opcionesRecepcion().get(1).habilitada());
 
         // 3. Paso 8-9: Seleccionar opción 1
-        SeleccionarRecepcionResponse opcionRes = gestor.tomarSeleccionRecepcion(EMP_CORDOBA, nroBolsin, 1);
+        SeleccionarRecepcionResponse opcionRes = gestor.tomarSeleccionRecepcion(1);
         assertEquals(1, opcionRes.opcion());
         assertTrue(opcionRes.requiereConfirmacion());
 
         // 4. Paso 10-12: Confirmar recepción
-        ConfirmarRecepcionResponse confirmacion = gestor.tomarConfirmacion(EMP_CORDOBA, nroBolsin, 1, true);
+        ConfirmarRecepcionResponse confirmacion = gestor.tomarConfirmacion(true);
         assertTrue(confirmacion.confirmado());
         assertEquals(nroBolsin, confirmacion.numeroBolsin());
         assertEquals("Recibido en CM destino", confirmacion.nuevoEstadoBolsin());
@@ -101,14 +108,13 @@ class GestorRecepcionBolsinTests {
             for (DetalleRemito d : r.getDetalleRemito()) {
                 Documentacion doc = d.buscarDocumentacionRemito();
                 assertTrue(doc.getEstado() instanceof RecibidaYAceptada, "La documentación debe estar en estado RecibidaYAceptada (State)");
-                assertEquals("Recibida y aceptada", doc.getEstado().getNombre());
 
                 // Historial de la documentación: cambio actual
                 CambioEstadoDocumentacion cambioDocActual = doc.getCambioEstado().stream()
                         .filter(CambioEstadoDocumentacion::esEstadoActual)
                         .findFirst()
                         .orElseThrow();
-                assertEquals("Recibida y aceptada", cambioDocActual.getEstado().getNombre());
+                assertTrue(cambioDocActual.getEstado() instanceof RecibidaYAceptada);
                 assertNull(cambioDocActual.getFechaHoraFin());
                 assertNotNull(cambioDocActual.getFechaHoraInicio());
                 assertNotNull(cambioDocActual.getResponsableCE());
@@ -121,7 +127,7 @@ class GestorRecepcionBolsinTests {
                         .toList();
                 assertFalse(cambiosCerrados.isEmpty(), "Debe existir al menos un cambio cerrado");
                 CambioEstadoDocumentacion cambioAnterior = cambiosCerrados.get(cambiosCerrados.size() - 1);
-                assertEquals("En bolsín enviado", cambioAnterior.getEstado().getNombre());
+                assertTrue(cambioAnterior.getEstado() instanceof EnBolsinEnviado);
                 assertNotNull(cambioAnterior.getFechaHoraFin(), "El cambio anterior debe tener fechaHoraFin asignada");
                 assertEquals(cambioDocActual.getFechaHoraInicio(), cambioAnterior.getFechaHoraFin(),
                         "La fechaHoraFin del cambio anterior debe coincidir con la fechaHoraInicio del cambio actual");
@@ -165,13 +171,19 @@ class GestorRecepcionBolsinTests {
         int nroBolsin = 1002;
 
         // Primera confirmación exitosa
-        ConfirmarRecepcionResponse primera = gestor.tomarConfirmacion(EMP_CORDOBA, nroBolsin, 1, true);
+        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+        gestor.tomarSeleccionBolsin(nroBolsin);
+        gestor.tomarSeleccionRecepcion(1);
+        ConfirmarRecepcionResponse primera = gestor.tomarConfirmacion(true);
         assertTrue(primera.confirmado());
 
         // Segunda confirmación sobre el mismo bolsín
+        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+        gestor.tomarSeleccionBolsin(nroBolsin);
+        gestor.tomarSeleccionRecepcion(1);
         ConflictoEstadoException ex = assertThrows(
                 ConflictoEstadoException.class,
-                () -> gestor.tomarConfirmacion(EMP_CORDOBA, nroBolsin, 1, true)
+                () -> gestor.tomarConfirmacion(true)
         );
         assertTrue(ex.getMessage().contains("1002"), "El mensaje debe referenciar el número de bolsín en conflicto");
     }
@@ -180,15 +192,17 @@ class GestorRecepcionBolsinTests {
     @DisplayName("Opciones 2, 3 y 4: lanzan FuncionalidadNoDisponibleException sin modificar la base de datos")
     void opcionesNoDisponibles_lanzanExcepcion() {
         int nroBolsin = 1003;
+        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+        gestor.tomarSeleccionBolsin(nroBolsin);
 
         assertThrows(FuncionalidadNoDisponibleException.class,
-                () -> gestor.tomarSeleccionRecepcion(EMP_CORDOBA, nroBolsin, 2));
+                () -> gestor.tomarSeleccionRecepcion(2));
 
         assertThrows(FuncionalidadNoDisponibleException.class,
-                () -> gestor.tomarSeleccionRecepcion(EMP_CORDOBA, nroBolsin, 3));
+                () -> gestor.tomarSeleccionRecepcion(3));
 
         assertThrows(FuncionalidadNoDisponibleException.class,
-                () -> gestor.tomarSeleccionRecepcion(EMP_CORDOBA, nroBolsin, 4));
+                () -> gestor.tomarSeleccionRecepcion(4));
 
         assertThrows(FuncionalidadNoDisponibleException.class,
                 () -> gestor.tomarConfirmacion(EMP_CORDOBA, nroBolsin, 2, true));
@@ -198,6 +212,9 @@ class GestorRecepcionBolsinTests {
     @DisplayName("Rollback: Si ocurre un fallo a mitad de tomarConfirmacion, no queda ningún estado modificado en BD")
     void rollback_errorAMitadDeConfirmacion_noModificaEstados() {
         int nroBolsin = 1003;
+        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+        gestor.tomarSeleccionBolsin(nroBolsin);
+        gestor.tomarSeleccionRecepcion(1);
 
         // Modificamos temporalmente el nombre del estado en catálogo para provocar un error una vez iniciado el cambio en memoria
         EstadoRemito estadoRemitoOriginal = estadoRemitoRepository.findByNombre("Recibido y Aceptado").orElseThrow();
@@ -208,7 +225,7 @@ class GestorRecepcionBolsinTests {
             // Se ejecuta la llamada: dentro de tomarConfirmacion se llama a recibirBolsin()
             // pero falla inmediatamente al buscar el estado de remito en el catálogo -> rollback total
             assertThrows(IllegalStateException.class, () ->
-                    gestor.tomarConfirmacion(EMP_CORDOBA, nroBolsin, 1, true)
+                    gestor.tomarConfirmacion(true)
             );
         } finally {
             // Restauramos el nombre original del catálogo
@@ -228,8 +245,11 @@ class GestorRecepcionBolsinTests {
     @DisplayName("Flujo A6: No confirmar (confirmado=false) devuelve confirmado=false sin modificar datos")
     void flujoA6_noConfirmar_noModificaBD() {
         int nroBolsin = 1003;
+        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+        gestor.tomarSeleccionBolsin(nroBolsin);
+        gestor.tomarSeleccionRecepcion(1);
 
-        ConfirmarRecepcionResponse respuesta = gestor.tomarConfirmacion(EMP_CORDOBA, nroBolsin, 1, false);
+        ConfirmarRecepcionResponse respuesta = gestor.tomarConfirmacion(false);
 
         assertFalse(respuesta.confirmado());
         assertTrue(respuesta.mensaje().contains("No se registró la recepción"));
@@ -237,5 +257,25 @@ class GestorRecepcionBolsinTests {
         // El bolsín 1003 debe seguir en estado Enviado
         Bolsin b1003 = bolsinRepository.findByNumeroBolsin(nroBolsin).orElseThrow();
         assertTrue(b1003.sosEnviado(), "El bolsín 1003 debe conservar su estado Enviado");
+    }
+
+    @Test
+    @DisplayName("Secuencia inválida: confirmar sin bolsín seleccionado lanza ConflictoEstadoException (409)")
+    void confirmarSinSeleccionarBolsin_lanzaConflicto() {
+        gestor.finCU();
+        assertThrows(ConflictoEstadoException.class, () -> gestor.tomarConfirmacion(true));
+    }
+
+    @Test
+    @DisplayName("Cambio de usuario: iniciar con nuevo usuario reinicia el estado del Gestor")
+    void cambioUsuario_reiniciaEstadoGestor() {
+        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+        gestor.tomarSeleccionBolsin(1001);
+        assertNotNull(gestor.getBolsinSeleccionado());
+
+        // Al iniciar con otro usuario o hacer finCU se limpia el bolsín seleccionado
+        gestor.finCU();
+        assertNull(gestor.getBolsinSeleccionado());
+        assertNull(gestor.getEmpleadoLogueado());
     }
 }

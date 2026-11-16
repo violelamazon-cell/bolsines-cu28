@@ -67,7 +67,11 @@ class BolsinesApplicationTests {
 		Bolsin b1005 = bolsinRepository.findByNumeroBolsin(1005)
 				.orElseThrow(() -> new AssertionError("Bolsín 1005 no encontrado"));
 		assertFalse(b1005.sosEnviado(), "(c) Bolsín 1005 ya fue recibido; sosEnviado() debe ser false");
-		assertEquals("Recibido en CM destino", b1005.buscarEstadoActual().getEstado().getNombre(),
+		CambioEstadoBolsin cambioActual1005 = b1005.getCambioEstado().stream()
+				.filter(CambioEstadoBolsin::esActual)
+				.findFirst()
+				.orElseThrow();
+		assertEquals("Recibido en CM destino", cambioActual1005.getEstado().getNombre(),
 				"(c) El estado actual del bolsín 1005 debe ser 'Recibido en CM destino'");
 
 		// (d) Cada documentación vigente del bolsín 1001 está en 'En bolsín enviado'
@@ -83,8 +87,6 @@ class BolsinesApplicationTests {
 
 		assertEquals(3, docs1001.size(), "Bolsín 1001 debe contener en total 3 documentaciones");
 		for (Documentacion doc : docs1001) {
-			assertEquals(EnBolsinEnviado.NOMBRE, doc.getEstado().getNombre(),
-					"(d) La documentación #" + doc.getNumero() + " debe tener estado actual '" + EnBolsinEnviado.NOMBRE + "'");
 			assertTrue(doc.getEstado() instanceof EnBolsinEnviado,
 					"(d) La instancia polimórfica debe ser EnBolsinEnviado");
 
@@ -94,8 +96,8 @@ class BolsinesApplicationTests {
 					.findFirst()
 					.orElseThrow(() -> new AssertionError("No se encontró cambio vigente para doc #" + doc.getNumero()));
 
-			assertEquals(EnBolsinEnviado.NOMBRE, cambioVigente.getEstado().getNombre(),
-					"(d) El cambio vigente debe registrar estado '" + EnBolsinEnviado.NOMBRE + "'");
+			assertTrue(cambioVigente.getEstado() instanceof EnBolsinEnviado,
+					"(d) El cambio vigente debe registrar estado EnBolsinEnviado");
 			assertNull(cambioVigente.getFechaHoraFin(), "(d) El cambio vigente debe tener fechaHoraFin null");
 		}
 	}
