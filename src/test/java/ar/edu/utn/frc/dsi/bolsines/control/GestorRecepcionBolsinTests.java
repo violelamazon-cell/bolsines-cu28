@@ -21,8 +21,10 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests de integración para GestorRecepcionBolsin (Fase 3 - Parte B).
  *
- * Ejecuta sobre el perfil 'test' (H2 en memoria, create-drop) con datos sembrados por DataLoader.
- * Verifica la lógica del Gestor con estado, el Patrón Experto y el cambio de estado con el Patrón State.
+ * Ejecuta sobre el perfil 'test' (H2 en memoria, create-drop) con datos
+ * sembrados por DataLoader.
+ * Verifica la lógica del Gestor con estado, el Patrón Experto y el cambio de
+ * estado con el Patrón State.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -84,7 +86,8 @@ class GestorRecepcionBolsinTests {
         assertEquals(3, confirmacion.documentacionesActualizadas());
 
         // Aserción: una notificación por CM de origen distinta
-        assertEquals(1, confirmacion.notificaciones().size(), "Debe emitirse exactamente una notificación para CM Mendoza");
+        assertEquals(1, confirmacion.notificaciones().size(),
+                "Debe emitirse exactamente una notificación para CM Mendoza");
         NotificacionDto notif = confirmacion.notificaciones().get(0);
         assertEquals("CM Mendoza", notif.cmOrigen());
         assertEquals("mendoza@bolsines.gov.ar", notif.email());
@@ -107,10 +110,12 @@ class GestorRecepcionBolsinTests {
         assertEquals("Gómez", cambioBolsinActual.getResponsableCE()[1]);
 
         for (Remito r : bolsinBd.getRemito()) {
-            assertEquals("Recibido y Aceptado", r.getEstado().getNombre(), "Cada remito debe pasar a Recibido y Aceptado");
+            assertEquals("Recibido y Aceptado", r.getEstado().getNombre(),
+                    "Cada remito debe pasar a Recibido y Aceptado");
             for (DetalleRemito d : r.getDetalleRemito()) {
                 Documentacion doc = d.buscarDocumentacionRemito();
-                assertTrue(doc.getEstado() instanceof RecibidaYAceptada, "La documentación debe estar en estado RecibidaYAceptada (State)");
+                assertTrue(doc.getEstado() instanceof RecibidaYAceptada,
+                        "La documentación debe estar en estado RecibidaYAceptada (State)");
 
                 // Historial de la documentación: cambio actual
                 CambioEstadoDocumentacion cambioDocActual = doc.getCambioEstado().stream()
@@ -144,8 +149,7 @@ class GestorRecepcionBolsinTests {
         gestor.registrarRecepcionBolsin(EMP_CORDOBA);
         RecursoNoEncontradoException ex = assertThrows(
                 RecursoNoEncontradoException.class,
-                () -> gestor.filtrarBolsines(99999, null)
-        );
+                () -> gestor.filtrarBolsines(99999, null));
         assertTrue(ex.getMessage().contains("precinto"), "El mensaje debe aludir al número de precinto");
     }
 
@@ -155,9 +159,9 @@ class GestorRecepcionBolsinTests {
         gestor.registrarRecepcionBolsin(EMP_CORDOBA);
         RecursoNoEncontradoException ex = assertThrows(
                 RecursoNoEncontradoException.class,
-                () -> gestor.filtrarBolsines(null, "CM Inexistente Tierra del Fuego")
-        );
-        assertTrue(ex.getMessage().contains("comisión médica"), "El mensaje debe aludir a la comisión médica de origen");
+                () -> gestor.filtrarBolsines(null, "CM Inexistente Tierra del Fuego"));
+        assertTrue(ex.getMessage().contains("comisión médica"),
+                "El mensaje debe aludir a la comisión médica de origen");
     }
 
     @Test
@@ -165,9 +169,9 @@ class GestorRecepcionBolsinTests {
     void estadoVacio_empleadoVillaMaria_lanzaExcepcion() {
         RecursoNoEncontradoException ex = assertThrows(
                 RecursoNoEncontradoException.class,
-                () -> gestor.registrarRecepcionBolsin(EMP_VILLA_MARIA)
-        );
-        assertTrue(ex.getMessage().contains("No hay bolsines enviados"), "El mensaje debe indicar ausencia de bolsines pendientes");
+                () -> gestor.registrarRecepcionBolsin(EMP_VILLA_MARIA));
+        assertTrue(ex.getMessage().contains("No hay bolsines enviados"),
+                "El mensaje debe indicar ausencia de bolsines pendientes");
     }
 
     @Test
@@ -182,14 +186,12 @@ class GestorRecepcionBolsinTests {
         ConfirmarRecepcionResponse primera = gestor.tomarConfirmacion(true);
         assertTrue(primera.confirmado());
 
-        // Segunda confirmación sobre el mismo bolsín
+        // Segundo intento sobre el mismo bolsín: ya no está en estado Enviado,
+        // así que el conflicto aparece al seleccionarlo
         gestor.registrarRecepcionBolsin(EMP_CORDOBA);
-        gestor.tomarSeleccionBolsin(nroBolsin);
-        gestor.tomarSeleccionRecepcion(1);
         ConflictoEstadoException ex = assertThrows(
                 ConflictoEstadoException.class,
-                () -> gestor.tomarConfirmacion(true)
-        );
+                () -> gestor.tomarSeleccionBolsin(nroBolsin));
         assertTrue(ex.getMessage().contains("1002"), "El mensaje debe referenciar el número de bolsín en conflicto");
     }
 
@@ -218,24 +220,25 @@ class GestorRecepcionBolsinTests {
         gestor.tomarSeleccionBolsin(nroBolsin);
         gestor.tomarSeleccionRecepcion(1);
 
-        // Modificamos temporalmente el nombre del estado en catálogo para provocar un error una vez iniciado el cambio en memoria
+        // Modificamos temporalmente el nombre del estado en catálogo para provocar un
+        // error una vez iniciado el cambio en memoria
         EstadoRemito estadoRemitoOriginal = estadoRemitoRepository.findByNombre("Recibido y Aceptado").orElseThrow();
         estadoRemitoOriginal.setNombre("Recibido y Aceptado TEMPORAL");
         estadoRemitoRepository.save(estadoRemitoOriginal);
 
         try {
             // Se ejecuta la llamada: dentro de tomarConfirmacion se llama a recibirBolsin()
-            // pero falla inmediatamente al buscar el estado de remito en el catálogo -> rollback total
-            assertThrows(IllegalStateException.class, () ->
-                    gestor.tomarConfirmacion(true)
-            );
+            // pero falla inmediatamente al buscar el estado de remito en el catálogo ->
+            // rollback total
+            assertThrows(IllegalStateException.class, () -> gestor.tomarConfirmacion(true));
         } finally {
             // Restauramos el nombre original del catálogo
             estadoRemitoOriginal.setNombre("Recibido y Aceptado");
             estadoRemitoRepository.save(estadoRemitoOriginal);
         }
 
-        // Verificamos que la BD hizo rollback completo: el bolsín 1003 sigue en estado Enviado
+        // Verificamos que la BD hizo rollback completo: el bolsín 1003 sigue en estado
+        // Enviado
         Bolsin b1003 = bolsinRepository.findByNumeroBolsinWithCambios(nroBolsin).orElseThrow();
         assertTrue(b1003.sosEnviado(), "Rollback: Bolsín 1003 debe seguir en estado Enviado");
         CambioEstadoBolsin ceB1003 = b1003.getCambioEstado().stream()
