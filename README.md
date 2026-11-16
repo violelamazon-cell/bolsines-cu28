@@ -120,7 +120,7 @@ Para cada documentación del bolsín recibido se ve el estado anterior (`EnBolsi
 .\mvnw test
 ```
 
-Ejecuta las pruebas unitarias del dominio y del patrón State, pruebas del gestor con mocks y pruebas de integración de la API REST con MockMvc. El resultado esperado es `BUILD SUCCESS` con **53 tests** y 0 fallos.
+Ejecuta las pruebas unitarias del dominio y del patrón State, pruebas del gestor con mocks y pruebas de integración de la API REST con MockMvc. El resultado esperado es `BUILD SUCCESS` con **51 tests** y 0 fallos.
 
 ## 10. Cómo reiniciar los datos de prueba
 
@@ -144,14 +144,15 @@ Todas las respuestas de error tienen la forma `{ "mensaje": "texto legible" }`.
 | `POST /api/sesion/logout` | Cierra la sesión activa (registra `fechaHoraFin`). Devuelve 200. |
 | `GET /api/sesion` | Datos del usuario con sesión activa. Sin sesión activa devuelve 404. |
 | `GET /api/comisiones-medicas` | Catálogo para el filtro de origen |
+| `GET /api/recepcion-bolsin/pendientes` | Solo lectura: cantidad de bolsines enviados a la CM del empleado en sesión. Devuelve 200 con `{"cantidad": N}` (0 si no hay pendientes). Sin sesión activa devuelve 400. |
 | `POST /api/recepcion-bolsin/iniciar` | Pasos 1 a 4: CM del usuario logueado y bolsines enviados |
 | `GET /api/recepcion-bolsin/bolsines` | Filtro por precinto y CM de origen (A1 y A2) |
 | `POST /api/recepcion-bolsin/seleccionar-bolsin` | Remitos y documentación del bolsín |
 | `POST /api/recepcion-bolsin/seleccionar-recepcion` | Resumen de la opción de recepción elegida |
 | `POST /api/recepcion-bolsin/confirmar` | Registra la recepción (o A6 si `confirmado` es `false`) |
-| `POST /api/recepcion-bolsin/cancelar` | Cancela el caso de uso |
+| `POST /api/recepcion-bolsin/cancelar` | Cancela el caso de uso. Devuelve 204. |
 
-El usuario se identifica por la **sesión activa**: ningún endpoint del flujo recibe identificadores de empleado. Todos los endpoints de `/api/recepcion-bolsin` operan sobre el estado del Gestor. Códigos de respuesta: `200`, `204`, `400` (datos inválidos o credenciales incorrectas), `404` (no se encontró lo pedido), `409` (llamada fuera de secuencia o transición inválida) y `501` (opción no implementada).
+El usuario se identifica por la **sesión activa**: ningún endpoint del flujo recibe identificadores de empleado. Todos los endpoints de `/api/recepcion-bolsin` operan sobre el estado del Gestor. Códigos de respuesta: `200`, `204`, `400` (datos inválidos o credenciales incorrectas), `404` (no se encontró lo pedido), `409` (llamada fuera de secuencia o transición inválida), `500` (error interno inesperado) y `501` (opción no implementada).
 
 ## 12. Dónde está el patrón State
 
