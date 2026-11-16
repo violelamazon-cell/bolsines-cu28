@@ -15,7 +15,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -102,35 +101,13 @@ class RecepcionBolsinIntegrationTests {
     }
 
     @Test
-    @DisplayName("GET /api/sesion -> retorna datos del empleado activo")
+    @DisplayName("GET /api/sesion -> retorna los datos de la sesión activa")
     void getSesion_retornaDatosEmpleado() throws Exception {
-        mockMvc.perform(get("/api/sesion").param("empleadoId", EMP_CORDOBA))
+        mockMvc.perform(get("/api/sesion"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.empleadoId").value(1))
                 .andExpect(jsonPath("$.nombreCompleto").isNotEmpty())
                 .andExpect(jsonPath("$.codigoCm").value("CMJ-CBA"));
-    }
-
-    @Test
-    @DisplayName("GET /api/sesion/empleados -> lista todos los empleados")
-    void listarEmpleados_retornaLista() throws Exception {
-        mockMvc.perform(get("/api/sesion/empleados"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(4))));
-    }
-
-    @Test
-    @DisplayName("POST /api/sesion/iniciar -> cambia sesión y retorna datos")
-    void iniciarSesion_cambiaUsuario() throws Exception {
-        String body = """
-                {"empleadoId": 4}
-                """;
-        mockMvc.perform(post("/api/sesion/iniciar")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.empleadoId").value(4))
-                .andExpect(jsonPath("$.codigoCm").value("CMJ-VM"));
     }
 
     // =========================================================================
@@ -366,7 +343,7 @@ class RecepcionBolsinIntegrationTests {
     // =========================================================================
 
     @Test
-    @DisplayName("POST /api/sesion/iniciar a mitad del flujo reinicia el estado -> confirmar devuelve 409")
+    @DisplayName("login de otro usuario a mitad del flujo reinicia el estado -> confirmar devuelve 409")
     void cambioUsuarioAMitadDeFlujo_reiniciaEstado_confirmarDevuelve409() throws Exception {
         // 1. Iniciar recepción como Carlos Gómez (Córdoba)
         mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
@@ -389,13 +366,11 @@ class RecepcionBolsinIntegrationTests {
                                 """))
                 .andExpect(status().isOk());
 
-        // 4. Cambiar usuario a mitad del flujo (POST /api/sesion/iniciar con Laura Torres, id=4)
-        mockMvc.perform(post("/api/sesion/iniciar")
+        // 4. Hacer login con Laura Torres a mitad del flujo
+        mockMvc.perform(post("/api/sesion/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"empleadoId": 4}
-                                """))
-                .andExpect(status().isOk());
+                        .content("{\"usuario\":\"laura\",\"password\":\"1234\"}"))
+                        .andExpect(status().isOk());
 
         // 5. Intentar confirmar -> 409 Conflict porque el cambio de sesión llamó a finCU()
         mockMvc.perform(post("/api/recepcion-bolsin/confirmar")
