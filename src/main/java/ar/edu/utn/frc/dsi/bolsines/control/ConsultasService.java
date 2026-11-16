@@ -2,9 +2,13 @@ package ar.edu.utn.frc.dsi.bolsines.control;
 
 import ar.edu.utn.frc.dsi.bolsines.boundary.dto.BolsinResumenDto;
 import ar.edu.utn.frc.dsi.bolsines.boundary.dto.ComisionMedicaDto;
+import ar.edu.utn.frc.dsi.bolsines.boundary.excepciones.DatoInvalidoException;
 import ar.edu.utn.frc.dsi.bolsines.boundary.excepciones.RecursoNoEncontradoException;
-import ar.edu.utn.frc.dsi.bolsines.entidades.Bolsin;
+import ar.edu.utn.frc.dsi.bolsines.entidades.*;
+import ar.edu.utn.frc.dsi.bolsines.repositorios.BolsinRepository;
 import ar.edu.utn.frc.dsi.bolsines.repositorios.ComisionMedicaRepository;
+import ar.edu.utn.frc.dsi.bolsines.repositorios.EmpleadoRepository;
+import ar.edu.utn.frc.dsi.bolsines.repositorios.SesionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,17 +20,58 @@ import java.util.stream.Collectors;
  * ConsultasService – Servicio auxiliar para consultas del frontend:
  * - Listado de comisiones médicas (catálogo para filtros).
  * - Filtro de bolsines enviados en memoria a partir del estado del Gestor.
+ * - Conteo de bolsines pendientes de solo lectura para la homepage.
  */
 @Service
 public class ConsultasService {
 
     private final ComisionMedicaRepository comisionMedicaRepository;
     private final GestorRecepcionBolsin gestor;
+    private final BolsinRepository bolsinRepository;
+    private final SesionRepository sesionRepository;
+    private final EmpleadoRepository empleadoRepository;
 
     public ConsultasService(ComisionMedicaRepository comisionMedicaRepository,
-                            GestorRecepcionBolsin gestor) {
+                            GestorRecepcionBolsin gestor,
+                            BolsinRepository bolsinRepository,
+                            SesionRepository sesionRepository,
+                            EmpleadoRepository empleadoRepository) {
         this.comisionMedicaRepository = comisionMedicaRepository;
         this.gestor = gestor;
+        this.bolsinRepository = bolsinRepository;
+        this.sesionRepository = sesionRepository;
+        this.empleadoRepository = empleadoRepository;
+    }
+
+    /**
+     * Retorna la cantidad de bolsines pendientes de recepción para la Comisión Médica
+     * del usuario con sesión activa. Operación de solo lectura que no altera el estado del Gestor.
+     */
+    @Transactional(readOnly = true)
+    public int contarBolsinesPendientes() {
+        Sesion sesionActiva = sesionRepository.findTopByFechaHoraFinIsNullOrderByFechaHoraInicioDesc()
+                .orElseThrow(() -> new DatoInvalidoException("No hay una sesión activa de usuario."));
+
+        Usuario usuario = sesionActiva.getUsuarioLogueado();
+        if (usuario == null) {
+            throw new DatoInvalidoException("La sesión activa no tiene un usuario asociado.");
+        }
+
+        Empleado empleado = empleadoRepository.findAll().stream()
+                .filter(e -> e.esTuUsuario(usuario))
+                .findFirst()
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "No se encontró un empleado asociado al usuario logueado: " + usuario.getNombre()));
+
+        ComisionMedica cmUsuario = empleado.getCM();
+        if (cmUsuario == null) {
+            return 0;
+        }
+
+        List<Bolsin> candidatos = bolsinRepository.findByDestinoWithCambios(cmUsuario);
+        return (int) candidatos.stream()
+                .filter(b -> b.sosEnviado() && b.esTuCMDestino(cmUsuario))
+                .count();
     }
 
     /**

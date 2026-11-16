@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * SesionService – Servicio de aplicación encargado del inicio y fin de sesión (login/logout).
@@ -108,59 +107,6 @@ public class SesionService {
         }
 
         return construirSesionDto(usuario);
-    }
-
-    /**
-     * Inicia sesión directamente a partir del ID de un empleado (soporte para compatibilidad).
-     */
-    @Transactional
-    public SesionDto iniciarSesionPorEmpleado(Long empleadoId) {
-        if (empleadoId == null) {
-            throw new DatoInvalidoException("El id de empleado no puede ser nulo.");
-        }
-        Empleado emp = empleadoRepository.findById(empleadoId)
-                .orElseThrow(() -> new RecursoNoEncontradoException("No se encontró el empleado con id: " + empleadoId));
-
-        Usuario usuario = emp.getUsuario();
-        if (usuario == null) {
-            throw new DatoInvalidoException("El empleado no tiene un usuario asociado.");
-        }
-
-        LocalDateTime ahora = LocalDateTime.now();
-        List<Sesion> activas = sesionRepository.findByFechaHoraFinIsNull();
-        for (Sesion s : activas) {
-            s.setFechaHoraFin(ahora);
-            sesionRepository.save(s);
-        }
-
-        Sesion nuevaSesion = new Sesion(ahora, usuario);
-        sesionRepository.save(nuevaSesion);
-
-        gestor.finCU();
-
-        return new SesionDto(
-                emp.getId(),
-                emp.getNombre() + " " + emp.getApellido(),
-                emp.getEmail(),
-                emp.getCM().getCodigo(),
-                emp.getCM().getNombre()
-        );
-    }
-
-    /**
-     * Retorna el listado de empleados para utilidades o pruebas.
-     */
-    @Transactional(readOnly = true)
-    public List<SesionDto> listarEmpleados() {
-        return empleadoRepository.findAll().stream()
-                .map(emp -> new SesionDto(
-                        emp.getId(),
-                        emp.getNombre() + " " + emp.getApellido(),
-                        emp.getEmail(),
-                        emp.getCM().getCodigo(),
-                        emp.getCM().getNombre()
-                ))
-                .collect(Collectors.toList());
     }
 
     private SesionDto construirSesionDto(Usuario usuario) {

@@ -32,6 +32,9 @@
 
   window.__appState = state;
 
+  // Contador para evitar condición de carrera en cargarContadorPendientes
+  let contadorReqId = 0;
+
   // =========================================================================
   // Hash routing
   // =========================================================================
@@ -356,25 +359,29 @@
 
   async function cargarContadorPendientes() {
     if (!homeEl.pendientesCount) return;
+    const miId = ++contadorReqId;
     homeEl.pendientesCount.textContent = '…';
 
     try {
-      const res = await apiFetch('/api/recepcion-bolsin/iniciar', { method: 'POST' });
+      const res = await apiFetch('/api/recepcion-bolsin/pendientes');
+      if (miId !== contadorReqId) return;
       if (res.ok) {
         const data = await res.json();
-        const bolsines = Array.isArray(data)
-          ? data
-          : (data?.bolsines || data?.bolsinesEnviados || []);
-        state.listaBolsinesOriginal = bolsines;
-        homeEl.pendientesCount.textContent = String(bolsines.length);
-      } else if (res.status === 404) {
-        state.listaBolsinesOriginal = [];
-        homeEl.pendientesCount.textContent = '0';
+        if (miId !== contadorReqId) return;
+        const el = document.getElementById('home-pendientes-count');
+        if (!el) return;
+        el.textContent = String(data?.cantidad ?? 0);
       } else {
-        homeEl.pendientesCount.textContent = '—';
+        console.error('cargarContadorPendientes: respuesta inesperada, status', res.status);
+        const el = document.getElementById('home-pendientes-count');
+        if (!el) return;
+        el.textContent = '0';
       }
-    } catch (_) {
-      homeEl.pendientesCount.textContent = '—';
+    } catch (err) {
+      console.error('cargarContadorPendientes: error de red o parseo', err);
+      const el = document.getElementById('home-pendientes-count');
+      if (!el) return;
+      el.textContent = '0';
     }
   }
 

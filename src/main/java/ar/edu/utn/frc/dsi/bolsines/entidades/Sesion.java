@@ -71,8 +71,4 @@ public class Sesion {
         return this.usuario;
     }
 
-    public boolean esActiva() {
-        return this.fechaHoraFin == null;
-    }
 }
-

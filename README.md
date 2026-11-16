@@ -82,33 +82,25 @@ La primera vez que arranca, crea las tablas y carga los datos de prueba. Si se r
 
 ## 6. Usuarios y datos de prueba
 
-La pantalla inicial es un **login simulado**: se elige un empleado con su tarjeta (no hay contraseñas). Todos los empleados tienen el rol de **Encargado de Bolsines**.
+La pantalla inicial es un **inicio de sesión** con usuario y contraseña. El sistema crea una `Sesion` asociada al `Usuario` y el Gestor obtiene al empleado logueado a partir de ella (Sesión → Usuario → `esTuUsuario`). Todos los empleados tienen el rol de **Encargado de Bolsines**.
 
-| Empleado | Comisión Médica | Para probar |
-|---|---|---|
-| **Carlos Gómez** | CM Córdoba | Tiene 3 bolsines pendientes: es el usuario de la demo |
-| Ana Martínez | CM Mendoza | No ve los bolsines de Córdoba (el 1004 es suyo) |
-| Roberto Rossi | CMC Buenos Aires (central) | Comisión central, sin bolsines pendientes |
-| Laura Torres | CM Villa María | Sin bolsines pendientes: muestra el estado vacío |
-| Martín Benítez | CM Rosario | Sin bolsines pendientes |
-
-| Bolsín | Precinto | Origen → Destino | Estado inicial | Contenido |
+| Usuario | Contraseña | Empleado | Comisión Médica | Para probar |
 |---|---|---|---|---|
-| 1001 | 50001 | Mendoza → Córdoba | Enviado | 2 remitos, 3 documentaciones |
-| 1002 | 50002 | Rosario → Córdoba | Enviado | 1 remito, 2 documentaciones |
-| 1003 | 50003 | Villa María → Córdoba | Enviado | 2 remitos, 4 documentaciones |
-| 1004 | 50004 | Córdoba → Mendoza | Enviado | 1 remito, 1 documentación (no aparece para Carlos Gómez) |
-| 1005 | 50005 | Paraná → Córdoba | Recibido en CM destino | 1 remito, 1 documentación (no aparece en pendientes) |
+| **carlos** | 1234 | **Carlos Gómez** | CM Córdoba | Tiene 3 bolsines pendientes: es el usuario de la demo |
+| ana | 1234 | Ana Martínez | CM Mendoza | No ve los bolsines de Córdoba (el 1004 es suyo) |
+| roberto | 1234 | Roberto Rossi | CMC Buenos Aires (central) | Comisión central, sin bolsines pendientes |
+| laura | 1234 | Laura Torres | CM Villa María | Sin bolsines pendientes: muestra el estado vacío |
+| martin | 1234 | Martín Benítez | CM Rosario | Sin bolsines pendientes |
 
 ## 7. Recorrido sugerido de la demo
 
-1. Elegir a **Carlos Gómez** en la pantalla de login.
+1. Iniciar sesión con **carlos** / **1234** (Carlos Gómez).
 2. **Flujo principal:** entrar a *Registrar recepción*, seleccionar el bolsín del precinto `50001`, revisar remitos y documentación, elegir "El contenido del bolsín es igual al registrado", confirmar y ver el resultado con las notificaciones. El bolsín deja de aparecer en la lista.
 3. **A1:** filtrar por un precinto inexistente (por ejemplo `99999`).
 4. **A2:** filtrar por una comisión médica de origen que no tenga bolsines.
 5. **A6:** llegar a la confirmación y elegir *No confirmar*: no cambia nada.
 6. **Cancelar:** volver desde cualquier paso con *Cancelar*.
-7. **Estado vacío:** cerrar sesión y entrar como Laura Torres.
+7. **Estado vacío:** cerrar sesión e ingresar como **laura** / **1234** (Laura Torres).
 
 ## 8. Cómo ver los cambios en la base de datos
 
@@ -128,7 +120,7 @@ Para cada documentación del bolsín recibido se ve el estado anterior (`EnBolsi
 .\mvnw test
 ```
 
-Ejecuta las pruebas unitarias del dominio y del patrón State, pruebas del gestor con mocks y pruebas de integración de la API REST con MockMvc. El resultado esperado es `BUILD SUCCESS`.
+Ejecuta las pruebas unitarias del dominio y del patrón State, pruebas del gestor con mocks y pruebas de integración de la API REST con MockMvc. El resultado esperado es `BUILD SUCCESS` con **53 tests** y 0 fallos.
 
 ## 10. Cómo reiniciar los datos de prueba
 
@@ -148,18 +140,18 @@ Todas las respuestas de error tienen la forma `{ "mensaje": "texto legible" }`.
 
 | Método y ruta | Descripción |
 |---|---|
-| `GET /api/sesion/empleados` | Empleados disponibles para el login simulado |
-| `POST /api/sesion/iniciar` | Inicia la sesión simulada con un `empleadoId` |
-| `GET /api/sesion?empleadoId=` | Datos del usuario activo |
+| `POST /api/sesion/login` | Inicia sesión con `{"usuario":"...","password":"..."}`. Sin sesión activa previa, crea una nueva. |
+| `POST /api/sesion/logout` | Cierra la sesión activa (registra `fechaHoraFin`). Devuelve 200. |
+| `GET /api/sesion` | Datos del usuario con sesión activa. Sin sesión activa devuelve 404. |
 | `GET /api/comisiones-medicas` | Catálogo para el filtro de origen |
-| `POST /api/recepcion-bolsin/iniciar` | Pasos 1 a 4: CM del usuario y bolsines enviados (único endpoint que recibe `X-Empleado-Id`) |
+| `POST /api/recepcion-bolsin/iniciar` | Pasos 1 a 4: CM del usuario logueado y bolsines enviados |
 | `GET /api/recepcion-bolsin/bolsines` | Filtro por precinto y CM de origen (A1 y A2) |
 | `POST /api/recepcion-bolsin/seleccionar-bolsin` | Remitos y documentación del bolsín |
 | `POST /api/recepcion-bolsin/seleccionar-recepcion` | Resumen de la opción de recepción elegida |
 | `POST /api/recepcion-bolsin/confirmar` | Registra la recepción (o A6 si `confirmado` es `false`) |
 | `POST /api/recepcion-bolsin/cancelar` | Cancela el caso de uso |
 
-Únicamente el endpoint inicial `POST /api/recepcion-bolsin/iniciar` recibe el usuario activo en el encabezado `X-Empleado-Id` (para cargar `empleadoLogueado` en el Gestor). Los demás endpoints del flujo (`/bolsines`, `/seleccionar-bolsin`, `/seleccionar-recepcion`, `/confirmar`, `/cancelar`) operan sobre el estado conversacional del Gestor sin requerir encabezados ni identificadores redundantes. Códigos de respuesta: `200`, `204`, `400` (datos inválidos), `404` (no se encontró lo pedido), `409` (llamada fuera de secuencia o transición inválida) y `501` (opción no implementada). En `requests.http` hay ejemplos listos para probar.
+El usuario se identifica por la **sesión activa**: ningún endpoint del flujo recibe identificadores de empleado. Todos los endpoints de `/api/recepcion-bolsin` operan sobre el estado del Gestor. Códigos de respuesta: `200`, `204`, `400` (datos inválidos o credenciales incorrectas), `404` (no se encontró lo pedido), `409` (llamada fuera de secuencia o transición inválida) y `501` (opción no implementada).
 
 ## 12. Dónde está el patrón State
 
@@ -188,11 +180,13 @@ bolsines-cu28/
 │   │   │                            # ComisionMedicaController, ManejadorExcepciones
 │   │   ├── dto/                     # DTOs (records)
 │   │   └── excepciones/             # Excepciones de negocio de la API
-│   ├── control/                     # GestorRecepcionBolsin
+│   ├── control/                     # GestorRecepcionBolsin, SesionService,
+│   │                                # ConsultasService
 │   ├── entidades/                   # Bolsin, Remito, DetalleRemito, Documentacion,
 │   │   │                            # CambioEstadoBolsin, CambioEstadoDocumentacion,
-│   │   │                            # ComisionMedica, Empleado, TipoDocumento,
-│   │   │                            # EstadoBolsin, EstadoRemito, ResponsableConverter
+│   │   │                            # ComisionMedica, Empleado, Usuario, Sesion,
+│   │   │                            # TipoDocumento, EstadoBolsin, EstadoRemito,
+│   │   │                            # ResponsableConverter
 │   │   └── estado/                  # Patrón State: Estado, estados concretos y EstadoConverter
 │   ├── repositorios/                # Spring Data JPA
 │   ├── externos/                    # NotificadorEmail (CU 29) y su versión simulada
@@ -219,4 +213,4 @@ bolsines-cu28/
 
 ## 15. Desviaciones respecto de los diagramas
 
-Las diferencias entre el modelado y la implementación están registradas y justificadas en [`docs/DECISIONES.md`](docs/DECISIONES.md): la API REST y los DTOs en lugar de los mensajes `mostrar…`/`solicitar…`, el gestor con estado para demostración monousuario de la cátedra, el login y el correo simulados, el responsable como `String[]`, entre otras.
+Las diferencias entre el modelado y la implementación están registradas y justificadas en [`docs/DECISIONES.md`](docs/DECISIONES.md): la API REST y los DTOs en lugar de los mensajes `mostrar…`/`solicitar…`, el Gestor con estado según la indicación de la cátedra, el correo simulado, el responsable como `String[]`, y las clases de soporte fuera del Gestor (`SesionService` para el login y `ConsultasService` para el filtro de bolsines y el catálogo de comisiones), entre otras. Lo que no se rediseñó en la Entrega 2 (por ejemplo `Usuario`, `Sesion` y `Empleado`) se mantiene como en la Entrega 1.

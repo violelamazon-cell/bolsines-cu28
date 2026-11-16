@@ -1,13 +1,10 @@
 package ar.edu.utn.frc.dsi.bolsines.boundary;
 
-import ar.edu.utn.frc.dsi.bolsines.boundary.dto.CambiarSesionRequest;
 import ar.edu.utn.frc.dsi.bolsines.boundary.dto.LoginRequest;
 import ar.edu.utn.frc.dsi.bolsines.boundary.dto.SesionDto;
 import ar.edu.utn.frc.dsi.bolsines.control.SesionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * SesionController – Boundary para inicio y fin de sesión (login/logout).
@@ -49,36 +46,7 @@ public class SesionController {
      * Obtiene los datos de la sesión activa actual.
      */
     @GetMapping
-    public ResponseEntity<SesionDto> getSesion(@RequestParam(required = false) Long empleadoId) {
-        SesionDto sesion;
-        try {
-            sesion = sesionService.getSesionActiva();
-        } catch (Exception ex) {
-            if (empleadoId != null) {
-                sesion = sesionService.iniciarSesionPorEmpleado(empleadoId);
-            } else {
-                throw ex;
-            }
-        }
-        return ResponseEntity.ok(sesion);
-    }
-
-    /**
-     * GET /api/sesion/empleados
-     * Retorna el listado de empleados disponibles.
-     */
-    @GetMapping("/empleados")
-    public ResponseEntity<List<SesionDto>> listarEmpleados() {
-        return ResponseEntity.ok(sesionService.listarEmpleados());
-    }
-
-    /**
-     * POST /api/sesion/iniciar
-     * Cambia la sesión activa por id de empleado (compatibilidad).
-     */
-    @PostMapping("/iniciar")
-    public ResponseEntity<SesionDto> iniciarSesion(@RequestBody CambiarSesionRequest request) {
-        SesionDto sesion = sesionService.iniciarSesionPorEmpleado(request.empleadoId());
-        return ResponseEntity.ok(sesion);
+    public ResponseEntity<SesionDto> getSesion() {
+        return ResponseEntity.ok(sesionService.getSesionActiva());
     }
 }
