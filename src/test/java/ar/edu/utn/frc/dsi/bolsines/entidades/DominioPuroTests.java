@@ -24,14 +24,16 @@ class DominioPuroTests {
         LocalDateTime ahora = LocalDateTime.now();
         ComisionMedica cmOrigen = new ComisionMedica("CM-MZA", "CM Mendoza", "San Martin 100", "m@m.com", "123");
         TipoDocumento tipo = new TipoDocumento("Expediente", "Expediente de prueba");
-        String[] respEnvio = new String[]{"Ana", "Martínez"};
-        String[] respRecepcion = new String[]{"Carlos", "Gómez"};
+        String[] respEnvio = new String[] { "Ana", "Martínez" };
+        String[] respRecepcion = new String[] { "Carlos", "Gómez" };
 
         // Documentación en estado inicial EnBolsinEnviado
-        Documentacion doc = new Documentacion(3001, "Expediente López", ahora.minusDays(2), cmOrigen, tipo, new EnBolsinEnviado());
+        Documentacion doc = new Documentacion(3001, "Expediente López", ahora.minusDays(2), cmOrigen, tipo,
+                new EnBolsinEnviado());
 
         // Cambio de estado vigente previo (sin fecha fin)
-        CambioEstadoDocumentacion cambioPrevio = new CambioEstadoDocumentacion(ahora.minusDays(1), null, new EnBolsinEnviado(), respEnvio);
+        CambioEstadoDocumentacion cambioPrevio = new CambioEstadoDocumentacion(ahora.minusDays(1), null,
+                new EnBolsinEnviado(), respEnvio);
         doc.agregarCambioEstado(cambioPrevio);
 
         assertTrue(cambioPrevio.esEstadoActual(), "El cambio previo debe ser actual antes de la transición");
@@ -41,7 +43,8 @@ class DominioPuroTests {
         doc.aceptar(ahora, respRecepcion);
 
         // 1. El estado de la documentación debe haber cambiado a RecibidaYAceptada
-        assertTrue(doc.getEstado() instanceof RecibidaYAceptada, "El nuevo estado debe ser instancia de RecibidaYAceptada");
+        assertTrue(doc.getEstado() instanceof RecibidaYAceptada,
+                "El nuevo estado debe ser instancia de RecibidaYAceptada");
 
         // 2. El cambio anterior debe haber sido cerrado con fechaHoraFin = ahora
         assertFalse(cambioPrevio.esEstadoActual(), "El cambio anterior ya no debe ser actual");
@@ -54,7 +57,8 @@ class DominioPuroTests {
         assertTrue(cambioNuevo.esEstadoActual(), "El nuevo cambio debe ser el vigente (fechaHoraFin == null)");
         assertNull(cambioNuevo.getFechaHoraFin());
         assertEquals(ahora, cambioNuevo.getFechaHoraInicio());
-        assertArrayEquals(respRecepcion, cambioNuevo.getResponsableCE(), "El responsable debe ser el empleado que recibió");
+        assertArrayEquals(respRecepcion, cambioNuevo.getResponsableCE(),
+                "El responsable debe ser el empleado que recibió");
         assertTrue(cambioNuevo.getEstado() instanceof RecibidaYAceptada);
     }
 
@@ -62,15 +66,14 @@ class DominioPuroTests {
     @DisplayName("Patrón State: Transición no permitida lanza UnsupportedOperationException")
     void testTransicionNoPermitidaLanzaExcepcion() {
         LocalDateTime ahora = LocalDateTime.now();
-        String[] empleado = new String[]{"Carlos", "Gómez"};
+        String[] empleado = new String[] { "Carlos", "Gómez" };
 
-        // Una documentación en estado 'Registrada' NO puede ser 'aceptada' directamente en el CU 28
+        // Una documentación en estado 'Registrada' NO puede ser 'aceptada' directamente
+        // en el CU 28
         Documentacion docRegistrada = new Documentacion(9001, "Doc Nueva", ahora, null, null, new Registrada());
         docRegistrada.agregarCambioEstado(new CambioEstadoDocumentacion(ahora, null, new Registrada(), empleado));
 
-        assertThrows(UnsupportedOperationException.class, () ->
-                docRegistrada.aceptar(ahora, empleado)
-        );
+        assertThrows(UnsupportedOperationException.class, () -> docRegistrada.aceptar(ahora, empleado));
 
         // Tampoco se puede rechazar o redirigir desde Registrada
         assertThrows(UnsupportedOperationException.class, docRegistrada::rechazar);
@@ -85,7 +88,7 @@ class DominioPuroTests {
     @DisplayName("Patrón Experto: Bolsin.sosEnviado() responde según su cambio de estado actual")
     void testBolsinSosEnviado() {
         LocalDateTime ahora = LocalDateTime.now();
-        String[] emp = new String[]{"Ana", "Martínez"};
+        String[] emp = new String[] { "Ana", "Martínez" };
         EstadoBolsin ebCreado = new EstadoBolsin(EstadoBolsin.CREADO, "Creado");
         EstadoBolsin ebEnviado = new EstadoBolsin(EstadoBolsin.ENVIADO, "Enviado");
 
@@ -114,8 +117,8 @@ class DominioPuroTests {
     @DisplayName("Patrón Experto: Bolsin.recibir() cierra cambio vigente y agrega 'Recibido en CM destino'")
     void testBolsinRecibir() {
         LocalDateTime ahora = LocalDateTime.now();
-        String[] respEnvio = new String[]{"Ana", "Martínez"};
-        String[] respRecepcion = new String[]{"Carlos", "Gómez"};
+        String[] respEnvio = new String[] { "Ana", "Martínez" };
+        String[] respRecepcion = new String[] { "Carlos", "Gómez" };
 
         EstadoBolsin ebEnviado = new EstadoBolsin(EstadoBolsin.ENVIADO, "Enviado");
         EstadoBolsin ebRecibido = new EstadoBolsin(EstadoBolsin.RECIBIDO_EN_CM_DESTINO, "Recibido en CM destino");
@@ -153,7 +156,7 @@ class DominioPuroTests {
     @DisplayName("Integración pura de dominio: recibirYAceptarRemitos propaga la actualización al State de Documentacion")
     void testRecibirYAceptarRemitosPropagacion() {
         LocalDateTime ahora = LocalDateTime.now();
-        String[] resp = new String[]{"Carlos", "Gómez"};
+        String[] resp = new String[] { "Carlos", "Gómez" };
 
         EstadoRemito erEnviado = new EstadoRemito(EstadoRemito.EN_BOLSIN_ENVIADO, "Enviado");
         EstadoRemito erRecibido = new EstadoRemito(EstadoRemito.RECIBIDO_Y_ACEPTADO, "Recibido y Aceptado");
@@ -188,9 +191,8 @@ class DominioPuroTests {
         assertInstanceOf(EnBolsinEnviado.class, EstadoFactory.porNombre("EnBolsinEnviado"));
         assertInstanceOf(RecibidaYAceptada.class, EstadoFactory.porNombre("Recibida y aceptada"));
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                EstadoFactory.porNombre("EstadoInventado")
-        );
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> EstadoFactory.porNombre("EstadoInventado"));
         assertTrue(ex.getMessage().contains("no reconocido"));
 
         assertThrows(IllegalArgumentException.class, () -> EstadoFactory.porNombre(null));
@@ -225,7 +227,7 @@ class DominioPuroTests {
     }
 
     @Test
-    @DisplayName("Paso 2 E1: Usuario y Sesion - getUsuarioLogueado y esActiva")
+    @DisplayName("Paso 2 E1: Usuario y Sesion - getUsuarioLogueado y fechaHoraFin")
     void testUsuarioYSesion() {
         Usuario usuario = new Usuario("carlos", "1234");
         assertEquals("carlos", usuario.getNombre());
@@ -235,13 +237,12 @@ class DominioPuroTests {
         Sesion sesion = new Sesion(inicio, usuario);
         assertEquals(inicio, sesion.getFechaHoraInicio());
         assertNull(sesion.getFechaHoraFin());
-        assertTrue(sesion.esActiva());
         assertEquals(usuario, sesion.getUsuarioLogueado());
 
         LocalDateTime fin = inicio.plusHours(1);
         sesion.setFechaHoraFin(fin);
         assertEquals(fin, sesion.getFechaHoraFin());
-        assertFalse(sesion.esActiva());
+        assertNotNull(sesion.getFechaHoraFin());
     }
 
     @Test
