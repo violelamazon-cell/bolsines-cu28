@@ -120,7 +120,7 @@ FROM CAMBIOS_ESTADO_DOCUMENTACION
 ORDER BY DOCUMENTACION_ID, ID;
 ```
 
-Para cada documentación del bolsín recibido se ve el estado anterior (*En bolsín enviado*) con su fecha de fin completa, y el estado nuevo (*Recibida y aceptada*) con `FECHA_HORA_FIN` en `NULL`. La columna `RESPONSABLE_CE` guarda al responsable con el formato `nombre|apellido`.
+Para cada documentación del bolsín recibido se ve el estado anterior (`EnBolsinEnviado`) con su fecha de fin completa, y el estado nuevo (`RecibidaYAceptada`) con `FECHA_HORA_FIN` en `NULL`. La columna `RESPONSABLE_CE` guarda al responsable con el formato `nombre|apellido`.
 
 ## 9. Pruebas automáticas
 
@@ -128,9 +128,12 @@ Para cada documentación del bolsín recibido se ve el estado anterior (*En bols
 .\mvnw test
 ```
 
-Ejecuta 39 pruebas: pruebas unitarias del dominio y del patrón State, pruebas del gestor con mocks y pruebas de integración de la API REST con MockMvc. El resultado esperado es `BUILD SUCCESS`.
+Ejecuta las pruebas unitarias del dominio y del patrón State, pruebas del gestor con mocks y pruebas de integración de la API REST con MockMvc. El resultado esperado es `BUILD SUCCESS`.
 
 ## 10. Cómo reiniciar los datos de prueba
+
+> [!IMPORTANT]
+> Al actualizar a esta versión con el Gestor con estado y la persistencia del patrón State por nombre de clase, es necesario borrar la carpeta `data/` antes de iniciar para recrear la base de datos limpia.
 
 1. Detener la aplicación (`Ctrl + C`).
 2. Borrar la carpeta de datos:
@@ -149,14 +152,14 @@ Todas las respuestas de error tienen la forma `{ "mensaje": "texto legible" }`.
 | `POST /api/sesion/iniciar` | Inicia la sesión simulada con un `empleadoId` |
 | `GET /api/sesion?empleadoId=` | Datos del usuario activo |
 | `GET /api/comisiones-medicas` | Catálogo para el filtro de origen |
-| `POST /api/recepcion-bolsin/iniciar` | Pasos 1 a 4: CM del usuario y bolsines enviados |
+| `POST /api/recepcion-bolsin/iniciar` | Pasos 1 a 4: CM del usuario y bolsines enviados (único endpoint que recibe `X-Empleado-Id`) |
 | `GET /api/recepcion-bolsin/bolsines` | Filtro por precinto y CM de origen (A1 y A2) |
 | `POST /api/recepcion-bolsin/seleccionar-bolsin` | Remitos y documentación del bolsín |
 | `POST /api/recepcion-bolsin/seleccionar-recepcion` | Resumen de la opción de recepción elegida |
 | `POST /api/recepcion-bolsin/confirmar` | Registra la recepción (o A6 si `confirmado` es `false`) |
 | `POST /api/recepcion-bolsin/cancelar` | Cancela el caso de uso |
 
-Los endpoints de `/api/recepcion-bolsin` reciben el usuario activo en el encabezado `X-Empleado-Id`. Códigos de respuesta: `200`, `204`, `400` (datos inválidos), `404` (no se encontró lo pedido), `409` (llamada fuera de secuencia o transición inválida) y `501` (opción no implementada). En `requests.http` hay ejemplos listos para probar.
+Únicamente el endpoint inicial `POST /api/recepcion-bolsin/iniciar` recibe el usuario activo en el encabezado `X-Empleado-Id` (para cargar `empleadoLogueado` en el Gestor). Los demás endpoints del flujo (`/bolsines`, `/seleccionar-bolsin`, `/seleccionar-recepcion`, `/confirmar`, `/cancelar`) operan sobre el estado conversacional del Gestor sin requerir encabezados ni identificadores redundantes. Códigos de respuesta: `200`, `204`, `400` (datos inválidos), `404` (no se encontró lo pedido), `409` (llamada fuera de secuencia o transición inválida) y `501` (opción no implementada). En `requests.http` hay ejemplos listos para probar.
 
 ## 12. Dónde está el patrón State
 
@@ -165,7 +168,7 @@ Los endpoints de `/api/recepcion-bolsin` reciben el usuario activo en el encabez
 | Contexto | `entidades/Documentacion.java` – `aceptar(...)` delega en el estado, sin `if` ni `switch` |
 | Estado (abstracta) | `entidades/estado/Estado.java` |
 | Estado concreto del CU | `entidades/estado/EnBolsinEnviado.java` – `aceptar(...)` sigue la secuencia del diagrama E2 y crea `RecibidaYAceptada` |
-| Persistencia del estado | `entidades/estado/EstadoConverter.java` (guarda el nombre del estado) |
+| Persistencia del estado | `entidades/estado/EstadoConverter.java` (guarda el nombre de la clase) |
 
 El responsable de cada cambio de estado viaja como `String[]` `[nombre, apellido]` y se guarda con `ResponsableConverter`.
 
@@ -210,10 +213,10 @@ bolsines-cu28/
 | `docs/ESPECIFICACION_UX_UI_CU28.md` | Especificación de la interfaz |
 | `docs/PPAI2026_3K5_G08_E1_Analisis.pdf` | Documento de análisis de la Entrega 1 |
 | `docs/PPAI2026_3K5_G08_E2_Diseño.pdf` | Documento de diseño y arquitectura de la Entrega 2 |
-| `docs/SECUENCIA E2.png`, `docs/DIAGRAMA DE CLASES E2.png` | Diagramas de la Entrega 2 |
+| `docs/secuencia entrega 2.png`, `docs/diagrama de clases entrega 2.png` | Diagramas de la Entrega 2 |
 | `docs/secuenciaE1.png`, `docs/clasesE1.png`, `docs/maquinaEstadoE1.png` | Diagramas de la Entrega 1 |
 | `docs/caso bolsin con consignas completo.pdf` | Consigna completa del caso de uso |
 
 ## 15. Desviaciones respecto de los diagramas
 
-Las diferencias entre el modelado y la implementación están registradas y justificadas en [`docs/DECISIONES.md`](docs/DECISIONES.md): la API REST y los DTOs en lugar de los mensajes `mostrar…`/`solicitar…`, el gestor sin estado, el login y el correo simulados, el responsable como `String[]`, entre otras.
+Las diferencias entre el modelado y la implementación están registradas y justificadas en [`docs/DECISIONES.md`](docs/DECISIONES.md): la API REST y los DTOs en lugar de los mensajes `mostrar…`/`solicitar…`, el gestor con estado para demostración monousuario de la cátedra, el login y el correo simulados, el responsable como `String[]`, entre otras.

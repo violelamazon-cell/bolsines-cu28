@@ -37,6 +37,8 @@ public class DataLoader implements CommandLineRunner {
     private final EstadoRemitoRepository estadoRemitoRepository;
     private final DocumentacionRepository documentacionRepository;
     private final BolsinRepository bolsinRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final SesionRepository sesionRepository;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @org.springframework.beans.factory.annotation.Value("${bolsines.reset-on-start:false}")
@@ -49,6 +51,8 @@ public class DataLoader implements CommandLineRunner {
                       EstadoRemitoRepository estadoRemitoRepository,
                       DocumentacionRepository documentacionRepository,
                       BolsinRepository bolsinRepository,
+                      UsuarioRepository usuarioRepository,
+                      SesionRepository sesionRepository,
                       org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         this.comisionMedicaRepository = comisionMedicaRepository;
         this.empleadoRepository = empleadoRepository;
@@ -57,6 +61,8 @@ public class DataLoader implements CommandLineRunner {
         this.estadoRemitoRepository = estadoRemitoRepository;
         this.documentacionRepository = documentacionRepository;
         this.bolsinRepository = bolsinRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.sesionRepository = sesionRepository;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -68,15 +74,19 @@ public class DataLoader implements CommandLineRunner {
         // =====================================================================
         if (resetOnStart) {
             log.info("DataLoader: Reinicio de base de datos solicitado (bolsines.reset-on-start=true). Purgando datos...");
+            sesionRepository.deleteAll();
             bolsinRepository.deleteAll();
             documentacionRepository.deleteAll();
             empleadoRepository.deleteAll();
+            usuarioRepository.deleteAll();
             comisionMedicaRepository.deleteAll();
             tipoDocumentoRepository.deleteAll();
             estadoBolsinRepository.deleteAll();
             estadoRemitoRepository.deleteAll();
 
             try {
+                jdbcTemplate.execute("ALTER TABLE sesiones ALTER COLUMN id RESTART WITH 1");
+                jdbcTemplate.execute("ALTER TABLE usuarios ALTER COLUMN id RESTART WITH 1");
                 jdbcTemplate.execute("ALTER TABLE comisiones_medicas ALTER COLUMN id RESTART WITH 1");
                 jdbcTemplate.execute("ALTER TABLE empleados ALTER COLUMN id RESTART WITH 1");
                 jdbcTemplate.execute("ALTER TABLE tipos_documento ALTER COLUMN id RESTART WITH 1");
@@ -104,6 +114,16 @@ public class DataLoader implements CommandLineRunner {
         log.info("DataLoader: Iniciando carga de datos semilla...");
         LocalDateTime ahora = LocalDateTime.now();
 
+        // 0. Usuarios (E1)
+        Usuario uCba = usuarioRepository.save(new Usuario("carlos", "1234"));
+        Usuario uMza = usuarioRepository.save(new Usuario("ana", "1234"));
+        Usuario uCmc = usuarioRepository.save(new Usuario("roberto", "1234"));
+        Usuario uVm = usuarioRepository.save(new Usuario("laura", "1234"));
+        Usuario uRos = usuarioRepository.save(new Usuario("martin", "1234"));
+
+        // Sesión activa por defecto para Carlos Gómez (CM Córdoba)
+        sesionRepository.save(new Sesion(ahora, uCba));
+
         // 1. Comisiones Médicas
         ComisionMedica cmc = comisionMedicaRepository.save(new ComisionMedica("CMC-01", "CMC Buenos Aires (central)", "Moreno 401, CABA", "cmc@bolsines.gov.ar", "011-4321-0000"));
         ComisionMedica cmCba = comisionMedicaRepository.save(new ComisionMedica("CMJ-CBA", "CM Córdoba", "Rivadavia 767, Córdoba", "cordoba@bolsines.gov.ar", "0351-420-1111"));
@@ -112,12 +132,12 @@ public class DataLoader implements CommandLineRunner {
         ComisionMedica cmVm = comisionMedicaRepository.save(new ComisionMedica("CMJ-VM", "CM Villa María", "Entre Ríos 950, Villa María", "villamaria@bolsines.gov.ar", "0353-452-4444"));
         ComisionMedica cmPar = comisionMedicaRepository.save(new ComisionMedica("CMJ-PAR", "CM Paraná", "Urquiza 820, Paraná", "parana@bolsines.gov.ar", "0343-421-5555"));
 
-        // 2. Empleados (Encargados de Bolsines)
-        Empleado empCba = empleadoRepository.save(new Empleado("Carlos", "Gómez", "carlos.gomez@bolsines.gov.ar", cmCba));
-        Empleado empMza = empleadoRepository.save(new Empleado("Ana", "Martínez", "ana.martinez@bolsines.gov.ar", cmMza));
-        Empleado empCmc = empleadoRepository.save(new Empleado("Roberto", "Rossi", "roberto.rossi@bolsines.gov.ar", cmc));
-        Empleado empVm = empleadoRepository.save(new Empleado("Laura", "Torres", "laura.torres@bolsines.gov.ar", cmVm));
-        Empleado empRos = empleadoRepository.save(new Empleado("Martín", "Benítez", "martin.benitez@bolsines.gov.ar", cmRos));
+        // 2. Empleados (Encargados de Bolsines asociados a sus Usuarios)
+        Empleado empCba = empleadoRepository.save(new Empleado("Carlos", "Gómez", "carlos.gomez@bolsines.gov.ar", cmCba, uCba));
+        Empleado empMza = empleadoRepository.save(new Empleado("Ana", "Martínez", "ana.martinez@bolsines.gov.ar", cmMza, uMza));
+        Empleado empCmc = empleadoRepository.save(new Empleado("Roberto", "Rossi", "roberto.rossi@bolsines.gov.ar", cmc, uCmc));
+        Empleado empVm = empleadoRepository.save(new Empleado("Laura", "Torres", "laura.torres@bolsines.gov.ar", cmVm, uVm));
+        Empleado empRos = empleadoRepository.save(new Empleado("Martín", "Benítez", "martin.benitez@bolsines.gov.ar", cmRos, uRos));
 
         // 3. Tipos de Documento
         TipoDocumento tipoExp = tipoDocumentoRepository.save(new TipoDocumento("Expediente", "Expediente administrativo o pericial"));

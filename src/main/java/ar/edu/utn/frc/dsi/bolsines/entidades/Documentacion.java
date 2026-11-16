@@ -138,22 +138,44 @@ public class Documentacion {
     /**
      * Transición polimórfica para Flujo A4 (Rechazar).
      */
-    public void rechazar(LocalDateTime fechaHoraActual, String[] responsable) {
-        this.estado.rechazar(this, fechaHoraActual, responsable, this.cambioEstado);
+    public void rechazar() {
+        this.estado.rechazar();
     }
 
-    /**
-     * Transición polimórfica para Flujo A5 (Redirigir).
-     */
-    public void redirigir(LocalDateTime fechaHoraActual, String[] responsable) {
-        this.estado.redirigir(this, fechaHoraActual, responsable, this.cambioEstado);
+    public void redirigir() {
+        this.estado.redirigir();
     }
 
-    /**
-     * Transición polimórfica para Flujo A3 (No recepción).
-     */
-    public void registrarNoRecepcion(LocalDateTime fechaHoraActual, String[] responsable) {
-        this.estado.registrarNoRecepcion(this, fechaHoraActual, responsable, this.cambioEstado);
+    public void registrarNoRecepcion() {
+        this.estado.registrarNoRecepcion();
+    }
+
+    public void cancelar() {
+        this.estado.cancelar();
+    }
+
+    public void remitar() {
+        this.estado.remitar();
+    }
+
+    public void darDeBaja() {
+        this.estado.darDeBaja();
+    }
+
+    public void asociarBolsin() {
+        this.estado.asociarBolsin();
+    }
+
+    public void quitarDeBolsin() {
+        this.estado.quitarDeBolsin();
+    }
+
+    public void revincular() {
+        this.estado.revincular();
+    }
+
+    public void retirarBolsin() {
+        this.estado.retirarBolsin();
     }
 
     /**

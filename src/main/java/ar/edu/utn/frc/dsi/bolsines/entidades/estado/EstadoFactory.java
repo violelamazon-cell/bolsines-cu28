@@ -7,10 +7,8 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * Fábrica estática para instanciar subclases concretas de Estado a partir de su nombre.
- *
- * Utilizada por el converter JPA para reconstituir las instancias de Estado
- * persistidas como cadenas en la base de datos.
+ * Fábrica estática para instanciar subclases concretas de Estado a partir del nombre de la clase
+ * o su denominación legible.
  */
 public final class EstadoFactory {
 
@@ -19,32 +17,25 @@ public final class EstadoFactory {
     static {
         Map<String, Supplier<Estado>> map = new HashMap<>();
 
-        registrar(map, Registrada.NOMBRE, Registrada::new);
         registrar(map, "Registrada", Registrada::new);
-
-        registrar(map, EnRemito.NOMBRE, EnRemito::new);
         registrar(map, "EnRemito", EnRemito::new);
-
-        registrar(map, EnBolsinSaliente.NOMBRE, EnBolsinSaliente::new);
         registrar(map, "EnBolsinSaliente", EnBolsinSaliente::new);
-
-        registrar(map, EnBolsinEnviado.NOMBRE, EnBolsinEnviado::new);
         registrar(map, "EnBolsinEnviado", EnBolsinEnviado::new);
-
-        registrar(map, RecibidaYAceptada.NOMBRE, RecibidaYAceptada::new);
         registrar(map, "RecibidaYAceptada", RecibidaYAceptada::new);
-
-        registrar(map, RecibidaYRechazada.NOMBRE, RecibidaYRechazada::new);
         registrar(map, "RecibidaYRechazada", RecibidaYRechazada::new);
-
-        registrar(map, ParaRedirigir.NOMBRE, ParaRedirigir::new);
         registrar(map, "ParaRedirigir", ParaRedirigir::new);
-
-        registrar(map, NoRecibida.NOMBRE, NoRecibida::new);
         registrar(map, "NoRecibida", NoRecibida::new);
-
-        registrar(map, DeBaja.NOMBRE, DeBaja::new);
         registrar(map, "DeBaja", DeBaja::new);
+
+        // Nombres legibles en español (compatibilidad y tolerancia)
+        registrar(map, "En bolsin enviado", EnBolsinEnviado::new);
+        registrar(map, "Recibida y aceptada", RecibidaYAceptada::new);
+        registrar(map, "En bolsin saliente", EnBolsinSaliente::new);
+        registrar(map, "En remito", EnRemito::new);
+        registrar(map, "Recibida y rechazada", RecibidaYRechazada::new);
+        registrar(map, "Para redirigir", ParaRedirigir::new);
+        registrar(map, "No recibida", NoRecibida::new);
+        registrar(map, "De baja", DeBaja::new);
 
         REGISTRO = Collections.unmodifiableMap(map);
     }
@@ -58,10 +49,6 @@ public final class EstadoFactory {
 
     /**
      * Devuelve una nueva instancia del estado correspondiente al nombre dado.
-     *
-     * @param nombre Nombre del estado en la base de datos o en el modelo.
-     * @return Instancia concreta de Estado.
-     * @throws IllegalArgumentException si el nombre es nulo, vacío o no existe (nunca retorna null).
      */
     public static Estado porNombre(String nombre) {
         if (nombre == null || nombre.trim().isEmpty()) {
@@ -89,4 +76,3 @@ public final class EstadoFactory {
                 .replaceAll("\\s+", "");
     }
 }
-

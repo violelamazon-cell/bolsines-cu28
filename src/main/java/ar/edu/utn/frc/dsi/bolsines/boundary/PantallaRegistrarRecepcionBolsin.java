@@ -1,6 +1,7 @@
 package ar.edu.utn.frc.dsi.bolsines.boundary;
 
 import ar.edu.utn.frc.dsi.bolsines.boundary.dto.*;
+import ar.edu.utn.frc.dsi.bolsines.control.ConsultasService;
 import ar.edu.utn.frc.dsi.bolsines.control.GestorRecepcionBolsin;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,10 +11,9 @@ import java.util.List;
 /**
  * PantallaRegistrarRecepcionBolsin – boundary del CU 28 (diagramas E1 y E2).
  *
- * Responsabilidad ÚNICA: recibir las peticiones HTTP, delegar al Gestor y devolver
+ * Responsabilidad ÚNICA: recibir las peticiones HTTP, delegar al Gestor con estado y devolver
  * las respuestas DTO. NUNCA contiene lógica de dominio ni de negocio.
  *
- * El empleado logueado se identifica a través del header HTTP 'X-Empleado-Id' (por defecto 1 = Carlos Gómez, Córdoba).
  * Desviación D3: los métodos de salida del diagrama (mostrar... / solicitar...) se reemplazan
  * por retornos DTO en la API REST.
  */
@@ -22,9 +22,11 @@ import java.util.List;
 public class PantallaRegistrarRecepcionBolsin {
 
     private final GestorRecepcionBolsin gestor;
+    private final ConsultasService consultasService;
 
-    public PantallaRegistrarRecepcionBolsin(GestorRecepcionBolsin gestor) {
+    public PantallaRegistrarRecepcionBolsin(GestorRecepcionBolsin gestor, ConsultasService consultasService) {
         this.gestor = gestor;
+        this.consultasService = consultasService;
     }
 
     /**
@@ -32,14 +34,10 @@ public class PantallaRegistrarRecepcionBolsin {
      * Corresponde a opcRegistrarRecepcionBolsin() + habilitarPantalla() del diagrama.
      *
      * POST /api/recepcion-bolsin/iniciar
-     * Header: X-Empleado-Id: {id}
-     * Respuesta 200: { cmUsuario, codigoCm, bolsines: [...] }
-     * Respuesta 404: Si no existen bolsines pendientes para la CM destino.
      */
     @PostMapping("/iniciar")
-    public ResponseEntity<IniciarRecepcionResponse> opcRegistrarRecepcionBolsin(
-            @RequestHeader(value = "X-Empleado-Id", defaultValue = "1") Long empleadoId) {
-        IniciarRecepcionResponse respuesta = gestor.registrarRecepcionBolsin(empleadoId);
+    public ResponseEntity<IniciarRecepcionResponse> opcRegistrarRecepcionBolsin() {
+        IniciarRecepcionResponse respuesta = gestor.registrarRecepcionBolsin();
         return ResponseEntity.ok(respuesta);
     }
 
@@ -47,17 +45,12 @@ public class PantallaRegistrarRecepcionBolsin {
      * CU 28 Paso 4: Filtros de búsqueda (A1 y A2).
      *
      * GET /api/recepcion-bolsin/bolsines?numeroPrecinto=&cmOrigen=
-     * Header: X-Empleado-Id: {id}
-     * Respuesta 200: Lista filtrada de bolsines enviados.
-     * Respuesta 404 (A1): No se encontró bolsín con el precinto indicado.
-     * Respuesta 404 (A2): No se encontró bolsín con la CM de origen indicada.
      */
     @GetMapping("/bolsines")
     public ResponseEntity<List<BolsinResumenDto>> habilitarPantalla(
-            @RequestHeader(value = "X-Empleado-Id", defaultValue = "1") Long empleadoId,
             @RequestParam(required = false) Integer numeroPrecinto,
             @RequestParam(name = "cmOrigen", required = false) String cmOrigen) {
-        List<BolsinResumenDto> bolsines = gestor.filtrarBolsines(empleadoId, numeroPrecinto, cmOrigen);
+        List<BolsinResumenDto> bolsines = consultasService.filtrarBolsines(numeroPrecinto, cmOrigen);
         return ResponseEntity.ok(bolsines);
     }
 
@@ -66,14 +59,12 @@ public class PantallaRegistrarRecepcionBolsin {
      * Corresponde a tomarSeleccionBolsin() del diagrama.
      *
      * POST /api/recepcion-bolsin/seleccionar-bolsin
-     * Header: X-Empleado-Id: {id}
      * Body: { numeroBolsin }
      */
     @PostMapping("/seleccionar-bolsin")
     public ResponseEntity<SeleccionarBolsinResponse> tomarSeleccionBolsin(
-            @RequestHeader(value = "X-Empleado-Id", defaultValue = "1") Long empleadoId,
             @RequestBody SeleccionarBolsinRequest request) {
-        SeleccionarBolsinResponse respuesta = gestor.tomarSeleccionBolsin(empleadoId, request.numeroBolsin());
+        SeleccionarBolsinResponse respuesta = gestor.tomarSeleccionBolsin(request.numeroBolsin());
         return ResponseEntity.ok(respuesta);
     }
 
@@ -82,17 +73,12 @@ public class PantallaRegistrarRecepcionBolsin {
      * Corresponde a tomarSeleccionRecepcion() del diagrama.
      *
      * POST /api/recepcion-bolsin/seleccionar-recepcion
-     * Header: X-Empleado-Id: {id}
      * Body: { numeroBolsin, opcion }
-     * Respuesta 501: Si se seleccionan opciones 2, 3 o 4 (no disponibles todavía).
      */
     @PostMapping("/seleccionar-recepcion")
     public ResponseEntity<SeleccionarRecepcionResponse> tomarSeleccionRecepcion(
-            @RequestHeader(value = "X-Empleado-Id", defaultValue = "1") Long empleadoId,
             @RequestBody SeleccionarRecepcionRequest request) {
-        SeleccionarRecepcionResponse respuesta = gestor.tomarSeleccionRecepcion(
-                empleadoId, request.numeroBolsin(), request.opcion()
-        );
+        SeleccionarRecepcionResponse respuesta = gestor.tomarSeleccionRecepcion(request.opcion());
         return ResponseEntity.ok(respuesta);
     }
 
@@ -101,36 +87,26 @@ public class PantallaRegistrarRecepcionBolsin {
      * Corresponde a tomarConfirmacion() del diagrama.
      *
      * POST /api/recepcion-bolsin/confirmar
-     * Header: X-Empleado-Id: {id}
      * Body: { numeroBolsin, opcion, confirmado }
-     * Respuesta 200: Resultado de la confirmación (o de la no-confirmación A6).
-     * Respuesta 409: Conflicto si el bolsín ya fue recibido.
      */
     @PostMapping("/confirmar")
     public ResponseEntity<ConfirmarRecepcionResponse> tomarConfirmacion(
-            @RequestHeader(value = "X-Empleado-Id", defaultValue = "1") Long empleadoId,
             @RequestBody ConfirmarRecepcionRequest request) {
-        ConfirmarRecepcionResponse respuesta = gestor.tomarConfirmacion(
-                empleadoId,
-                request.numeroBolsin(),
-                request.opcion(),
-                request.confirmado()
-        );
+        ConfirmarRecepcionResponse respuesta = gestor.tomarConfirmacion(request.confirmado());
         return ResponseEntity.ok(respuesta);
     }
 
     /**
      * CU 28 Observación 1: Cancelar proceso de recepción.
-     * Corresponde a cancelar() del diagrama.
+     * Corresponde a finCU() del diagrama.
      *
      * POST /api/recepcion-bolsin/cancelar
      * Respuesta 204: No Content.
      */
     @PostMapping("/cancelar")
     public ResponseEntity<Void> cancelar() {
-        gestor.cancelar();
+        gestor.finCU();
         return ResponseEntity.noContent().build();
     }
 
 }
-

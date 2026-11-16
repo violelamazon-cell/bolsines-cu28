@@ -85,8 +85,8 @@ La consigna de la cátedra exige que el ciclo de vida de la clase `Documentacion
      ```
 2. **Clase Base Abstracta (`Estado`):**
    * Archivo: `src/main/java/ar/edu/utn/frc/dsi/bolsines/entidades/estado/Estado.java`
-   * Declara los métodos de transición: `aceptar(...)`, `rechazar(...)`, `redirigir(...)`, `registrarNoRecepcion(...)`.
-   * Por defecto, cada método lanza una excepción de negocio `IllegalStateException("Transición no permitida desde el estado: " + getNombre())`. Esto garantiza que los estados concretos solo respondan a los eventos que les son válidos.
+   * Declara los métodos de transición del ciclo de vida: `aceptar(...)`, `rechazar()`, `redirigir()`, `registrarNoRecepcion()`, `cancelar()`, `remitar()`, `darDeBaja()`, `asociarBolsin()`, `quitarDeBolsin()`, `revincular()`, `retirarBolsin()`.
+   * Por defecto, cada método lanza `UnsupportedOperationException("Transición fuera del alcance de esta entrega")`. La clase abstracta `Estado` no posee atributos propios (sin nombre ni descripción); sus métodos `equals`, `hashCode` y `toString` se calculan exclusivamente en función de su clase concreta (`getClass()`). Esto garantiza que los estados concretos solo respondan a los eventos que les son válidos.
 3. **Estado Concreto Origen (`EnBolsinEnviado`):**
    * Archivo: `src/main/java/ar/edu/utn/frc/dsi/bolsines/entidades/estado/EnBolsinEnviado.java`
    * Sobrescribe el método `aceptar(...)` ejecutando la secuencia exacta definida en el diagrama de secuencia E2 (paso 11c):
@@ -116,8 +116,8 @@ La consigna de la cátedra exige que el ciclo de vida de la clase `Documentacion
 ### 3.3 Persistencia del Patrón State (`EstadoConverter`)
 Para no crear tablas redundantes en la base de datos para clases que no tienen atributos mutables de instancia, se utiliza un `AttributeConverter` de JPA:
 * Archivo: `src/main/java/ar/edu/utn/frc/dsi/bolsines/entidades/estado/EstadoConverter.java`
-* En base de datos, la columna `estado` de la tabla `documentaciones` se almacena como `VARCHAR(50)` con el nombre canónico (ej: `"En bolsín enviado"` o `"Recibida y aceptada"`).
-* Al leer de la base de datos, `EstadoFactory` reconstituye la instancia concreta del estado correspondiente.
+* En base de datos, la columna `estado` de la tabla `documentaciones` se almacena como `VARCHAR(50)` con el nombre simple de la clase concreta (ej: `"EnBolsinEnviado"` o `"RecibidaYAceptada"`).
+* Al leer de la base de datos, `EstadoFactory` reconstituye la instancia concreta del estado correspondiente mediante un mapa de proveedores (`Supplier<Estado>`).
 
 ### 3.4 Persistencia de Responsable (`ResponsableConverter`) y Constructores de Cambio de Estado
 Para respetar la especificación del modelado (`responsableCE: string[]` / `empleadoLogueado: string[]` con nombre y apellido) sin desarmar la persistencia en una tabla extra, se utiliza un `AttributeConverter`:
@@ -130,7 +130,7 @@ Para respetar la especificación del modelado (`responsableCE: string[]` / `empl
 
 ## 4. Contrato de la API REST
 
-Todos los endpoints responden en formato JSON y manejan errores de manera uniforme a través de `ManejadorExcepciones` (`@RestControllerAdvice`), devolviendo `{ "mensaje": "..." }`:
+Todos los endpoints responden en formato JSON y manejan errores de manera uniforme a través de `ManejadorExcepciones` (`@RestControllerAdvice`), devolviendo `{ "mensaje": "..." }`. Únicamente `POST /api/recepcion-bolsin/iniciar` recibe `X-Empleado-Id` para cargar el usuario en el Gestor; los endpoints subsiguientes operan sobre los atributos de estado del Gestor:
 
 | Método | Endpoint | Cabecera / Parámetros | Descripción del Paso | Código HTTP |
 |:---|:---|:---|:---|:--:|

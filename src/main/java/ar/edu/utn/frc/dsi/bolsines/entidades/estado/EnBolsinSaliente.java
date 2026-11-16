@@ -1,11 +1,16 @@
 package ar.edu.utn.frc.dsi.bolsines.entidades.estado;
 
 public class EnBolsinSaliente extends Estado {
-
-    public static final String NOMBRE = "En bolsín saliente";
-
     public EnBolsinSaliente() {
-        super(NOMBRE, "Documentación incluida en un bolsín en preparación");
+    }
+
+    @Override
+    public void quitarDeBolsin() {
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
+    }
+
+    @Override
+    public void retirarBolsin() {
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
     }
 }
-

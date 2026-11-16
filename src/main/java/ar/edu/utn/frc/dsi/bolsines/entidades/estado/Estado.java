@@ -5,121 +5,84 @@ import ar.edu.utn.frc.dsi.bolsines.entidades.Documentacion;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Clase base abstracta del Patrón State (GoF) para el ciclo de vida de Documentacion.
  *
- * Cada estado concreto sobrescribe únicamente las transiciones válidas para su contexto.
- * Por defecto, cualquier transición no permitida lanza una excepción IllegalStateException.
+ * En el diagrama de clases E2 no posee atributos de estado propios.
+ * Las transiciones no implementadas o fuera del alcance lanzan UnsupportedOperationException.
  */
 public abstract class Estado {
 
-    private final String nombre;
-    private final String descripcion;
-
-    public Estado(String nombre, String descripcion) {
-        this.nombre = nombre;
-        this.descripcion = descripcion;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public String getDescripcion() {
-        return descripcion;
+    public Estado() {
     }
 
     // =========================================================================
-    // Métodos de transición de la Máquina de Estados (CU 28 y otros casos de uso)
+    // Métodos de transición de la Máquina de Estados (diagrama de clases E2)
     // =========================================================================
 
-    /**
-     * Transición CU 28: Aceptar la documentación recibida en la CM destino.
-     */
     public void aceptar(Documentacion doc, LocalDateTime ahora, String[] resp, List<CambioEstadoDocumentacion> cambios) {
-        throw transicionNoPermitida("aceptar");
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
     }
 
-    /**
-     * Transición CU 28 (A4): Rechazar documentación que no corresponde a la CM destino.
-     */
-    public void rechazar(Documentacion doc, LocalDateTime ahora, String[] resp, List<CambioEstadoDocumentacion> cambios) {
-        throw transicionNoPermitida("rechazar");
+    public void rechazar() {
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
     }
 
-    /**
-     * Transición CU 28 (A5): Redirigir documentación a otra área (en CMC).
-     */
-    public void redirigir(Documentacion doc, LocalDateTime ahora, String[] resp, List<CambioEstadoDocumentacion> cambios) {
-        throw transicionNoPermitida("redirigir");
+    public void redirigir() {
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
     }
 
-    /**
-     * Transición CU 28 (A3): Registrar no recepción de documentación faltante en el bolsín.
-     */
-    public void registrarNoRecepcion(Documentacion doc, LocalDateTime ahora, String[] resp, List<CambioEstadoDocumentacion> cambios) {
-        throw transicionNoPermitida("registrarNoRecepcion");
+    public void registrarNoRecepcion() {
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
     }
 
-    // Transiciones de otros casos de uso (definidas en la máquina de estados pero fuera del CU 28)
     public void cancelar() {
-        throw transicionNoPermitida("cancelar");
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
     }
 
     public void remitar() {
-        throw transicionNoPermitida("remitar");
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
     }
 
     public void darDeBaja() {
-        throw transicionNoPermitida("darDeBaja");
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
     }
 
     public void asociarBolsin() {
-        throw transicionNoPermitida("asociarBolsin");
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
     }
 
     public void quitarDeBolsin() {
-        throw transicionNoPermitida("quitarDeBolsin");
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
     }
 
     public void revincular() {
-        throw transicionNoPermitida("revincular");
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
     }
 
     public void retirarBolsin() {
-        throw transicionNoPermitida("retirarBolsin");
-    }
-
-    protected IllegalStateException transicionNoPermitida(String nombreMetodo) {
-        return new IllegalStateException(
-                "Transición '" + nombreMetodo + "' no permitida desde el estado '" + nombre + "'."
-        );
+        throw new UnsupportedOperationException("Transición fuera del alcance de esta entrega");
     }
 
     // =========================================================================
-    // equals / hashCode basados exclusivamente en el nombre canónico del estado
-    // Esto garantiza que Hibernate no detecte 'dirty changes' falsos en los flushes.
+    // equals / hashCode / toString basados exclusivamente en la clase concreta
     // =========================================================================
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Estado estado = (Estado) o;
-        return Objects.equals(nombre != null ? nombre.trim().toLowerCase() : null,
-                              estado.nombre != null ? estado.nombre.trim().toLowerCase() : null);
+        return true;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(nombre != null ? nombre.trim().toLowerCase() : null);
+        return getClass().hashCode();
     }
 
     @Override
     public String toString() {
-        return nombre;
+        return getClass().getSimpleName();
     }
 }
-

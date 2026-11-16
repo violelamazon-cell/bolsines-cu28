@@ -24,6 +24,10 @@ public class Empleado {
     @JoinColumn(name = "comision_medica_id", nullable = false)
     private ComisionMedica asignadoA;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", unique = true)
+    private Usuario usuario;
+
     public Empleado() {
     }
 
@@ -32,6 +36,14 @@ public class Empleado {
         this.apellido = apellido;
         this.email = email;
         this.asignadoA = asignadoA;
+    }
+
+    public Empleado(String nombre, String apellido, String email, ComisionMedica asignadoA, Usuario usuario) {
+        this.nombre = nombre;
+        this.apellido = apellido;
+        this.email = email;
+        this.asignadoA = asignadoA;
+        this.usuario = usuario;
     }
 
     public Long getId() {
@@ -70,6 +82,14 @@ public class Empleado {
         this.asignadoA = asignadoA;
     }
 
+    public Usuario getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(Usuario usuario) {
+        this.usuario = usuario;
+    }
+
     // =========================================================================
     // Métodos del dominio / Patrón Experto
     // =========================================================================
@@ -82,26 +102,22 @@ public class Empleado {
         return asignadoA;
     }
 
-    public String getNombreCompleto() {
-        return nombre + " " + apellido;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Empleado empleado = (Empleado) o;
-        return Objects.equals(id, empleado.id) || (email != null && Objects.equals(email, empleado.email));
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(email != null ? email : id);
+    /**
+     * Evalúa si este empleado está asociado al usuario recibido por parámetro.
+     * Corresponde al mensaje esTuUsuario(usuario) en la secuencia E1.
+     */
+    public boolean esTuUsuario(Usuario usuario) {
+        if (this.usuario == null || usuario == null) {
+            return false;
+        }
+        if (this.usuario.getId() != null && usuario.getId() != null) {
+            return Objects.equals(this.usuario.getId(), usuario.getId());
+        }
+        return Objects.equals(this.usuario.getNombre(), usuario.getNombre());
     }
 
     @Override
     public String toString() {
-        return getNombreCompleto();
+        return nombre + " " + apellido;
     }
 }
-
