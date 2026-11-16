@@ -378,10 +378,10 @@ public class GestorRecepcionBolsin {
         }
 
         this.bolsinSeleccionado = bolsin;
+        LocalDateTime fechaHoraActual = getFechaHoraActual();
         buscarEstadoBolsinRecibido();
         buscarEstadoRemitoRecibidoYAceptado();
 
-        LocalDateTime fechaHoraActual = getFechaHoraActual();
         String[] responsable = buscarNombreEmpleado(this.empleadoLogueado);
 
         // Paso 11a: actualizar estado del bolsín
