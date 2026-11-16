@@ -142,8 +142,12 @@ public class Bolsin {
      * si su estado corresponde a 'Enviado'.
      */
     public boolean sosEnviado() {
-        CambioEstadoBolsin actual = buscarEstadoActual();
-        return actual != null && actual.esEnviado();
+        for (CambioEstadoBolsin c : this.cambioEstado) {
+            if (c.esActual()) {
+                return c.esEnviado();
+            }
+        }
+        return false;
     }
 
     /**
@@ -186,9 +190,11 @@ public class Bolsin {
      * Cierra el cambio de estado actual y genera uno nuevo con estado 'Recibido en CM destino'.
      */
     public void recibir(LocalDateTime fechaHoraActual, String[] responsable, EstadoBolsin estadoRecibido) {
-        CambioEstadoBolsin actual = buscarEstadoActual();
-        if (actual != null) {
-            actual.setFechaHoraFin(fechaHoraActual);
+        for (CambioEstadoBolsin c : this.cambioEstado) {
+            if (c.esActual()) {
+                c.setFechaHoraFin(fechaHoraActual);
+                break;
+            }
         }
         CambioEstadoBolsin nuevoCambio = crearCambioEstadoBolsin(fechaHoraActual, responsable, estadoRecibido);
         this.cambioEstado.add(nuevoCambio);
@@ -208,18 +214,6 @@ public class Bolsin {
         for (Remito r : this.remito) {
             r.recibirYAceptar(estadoRecibidoYAceptado, fechaHoraActual, responsable);
         }
-    }
-
-    /**
-     * Busca en la colección el cambio de estado vigente (fechaHoraFin == null).
-     */
-    public CambioEstadoBolsin buscarEstadoActual() {
-        for (CambioEstadoBolsin c : this.cambioEstado) {
-            if (c.esActual()) {
-                return c;
-            }
-        }
-        return null;
     }
 
     @Override

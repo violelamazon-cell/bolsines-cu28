@@ -103,14 +103,9 @@ public class GestorRecepcionBolsin {
         this.estadoBolsin = null;
         this.estadoRemito = null;
 
-        ComisionMedica cmUsuario = this.empleadoLogueado.getCM();
-        List<Bolsin> candidatos = bolsinRepository.findByDestinoWithCambios(cmUsuario);
+        buscarBolsinesEnviados();
 
-        this.bolsinesEnviados = candidatos.stream()
-            .filter(b -> b.sosEnviado() && b.esTuCMDestino(cmUsuario))
-            .collect(Collectors.toList());
-
-        if (this.bolsinesEnviados.isEmpty()) {
+        if (this.bolsinesEnviados == null || this.bolsinesEnviados.isEmpty()) {
             throw new RecursoNoEncontradoException(
                 "No hay bolsines enviados pendientes de recepción para la comisión médica " + cmUsuario.getNombre()
             );
@@ -163,27 +158,19 @@ public class GestorRecepcionBolsin {
     }
 
     /**
-     * CU 28 Paso 3: Busca los bolsines en estado 'Enviado' cuyo destino es la CM del usuario.
-     * Patrón Experto: delega en bolsin.sosEnviado() y bolsin.esTuCMDestino(cmUsuario).
+     * CU 28 Paso 3: Busca los bolsines en estado 'Enviado' cuyo destino es la CM del usuario
+     * y los asigna al atributo de estado bolsinesEnviados.
      */
     @Transactional(readOnly = true)
-    public List<BolsinResumenDto> buscarBolsinesEnviados(ComisionMedica cmUsuario) {
+    public void buscarBolsinesEnviados() {
+        if (this.empleadoLogueado == null) {
+            return;
+        }
+        ComisionMedica cmUsuario = this.empleadoLogueado.getCM();
         List<Bolsin> candidatos = bolsinRepository.findByDestinoWithCambios(cmUsuario);
-
-        return candidatos.stream()
+        this.bolsinesEnviados = candidatos.stream()
             .filter(b -> b.sosEnviado() && b.esTuCMDestino(cmUsuario))
-            .map(b -> new BolsinResumenDto(
-                b.getNumeroBolsin(),
-                b.buscarCMOrigen(),
-                b.getNroPrecinto()
-            ))
             .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<BolsinResumenDto> buscarBolsinesEnviados(Long empleadoId) {
-        Empleado empleado = getUsuarioLogueado(empleadoId);
-        return buscarBolsinesEnviados(empleado.getCM());
     }
 
     // =========================================================================
@@ -233,14 +220,6 @@ public class GestorRecepcionBolsin {
             .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
-    public List<BolsinResumenDto> filtrarBolsines(Long empleadoId, Integer numeroPrecinto, String cmOrigen) {
-        if (empleadoId != null && (this.empleadoLogueado == null || !Objects.equals(this.empleadoLogueado.getId(), empleadoId))) {
-            registrarRecepcionBolsin(empleadoId);
-        }
-        return filtrarBolsines(numeroPrecinto, cmOrigen);
-    }
-
     // =========================================================================
     // CU 28 – Pasos 5 a 7: Tomar selección de bolsín y mostrar remitos/opciones
     // =========================================================================
@@ -277,14 +256,6 @@ public class GestorRecepcionBolsin {
             remitosDto,
             opciones
         );
-    }
-
-    @Transactional(readOnly = true)
-    public SeleccionarBolsinResponse tomarSeleccionBolsin(Long empleadoId, int numeroBolsin) {
-        if (empleadoId != null && (this.empleadoLogueado == null || !Objects.equals(this.empleadoLogueado.getId(), empleadoId))) {
-            registrarRecepcionBolsin(empleadoId);
-        }
-        return tomarSeleccionBolsin(numeroBolsin);
     }
 
     /**
@@ -342,17 +313,6 @@ public class GestorRecepcionBolsin {
             );
             default -> throw new DatoInvalidoException("La opción debe ser un número entre 1 y 4.");
         };
-    }
-
-    @Transactional(readOnly = true)
-    public SeleccionarRecepcionResponse tomarSeleccionRecepcion(Long empleadoId, int numeroBolsin, int opcion) {
-        if (empleadoId != null && (this.empleadoLogueado == null || !Objects.equals(this.empleadoLogueado.getId(), empleadoId))) {
-            registrarRecepcionBolsin(empleadoId);
-        }
-        if (this.bolsinSeleccionado == null || this.bolsinSeleccionado.getNumeroBolsin() != numeroBolsin) {
-            tomarSeleccionBolsin(numeroBolsin);
-        }
-        return tomarSeleccionRecepcion(opcion);
     }
 
     // =========================================================================
@@ -414,17 +374,17 @@ public class GestorRecepcionBolsin {
         }
 
         this.bolsinSeleccionado = bolsin;
-        this.estadoBolsin = buscarEstadoBolsinRecibido();
-        this.estadoRemito = buscarEstadoRemitoRecibidoYAceptado();
+        buscarEstadoBolsinRecibido();
+        buscarEstadoRemitoRecibidoYAceptado();
 
         LocalDateTime fechaHoraActual = getFechaHoraActual();
         String[] responsable = buscarNombreEmpleado(this.empleadoLogueado);
 
         // Paso 11a: actualizar estado del bolsín
-        recibirBolsin(this.bolsinSeleccionado, fechaHoraActual, responsable, this.estadoBolsin);
+        recibirBolsin(fechaHoraActual, responsable);
 
         // Paso 11b y 11c: actualizar remitos y documentación (patrón State)
-        recibirYAceptarRemitos(this.bolsinSeleccionado, this.estadoRemito, fechaHoraActual, responsable);
+        recibirYAceptarRemitos(fechaHoraActual, responsable);
 
         int totalRemitos = this.bolsinSeleccionado.buscarRemitosBolsin().size();
         int totalDocs = contarDocumentaciones(this.bolsinSeleccionado);
@@ -452,22 +412,6 @@ public class GestorRecepcionBolsin {
         );
     }
 
-    @Transactional
-    public ConfirmarRecepcionResponse tomarConfirmacion(Long empleadoId, int numeroBolsin, int opcion, boolean confirmado) {
-        if (empleadoId != null && (this.empleadoLogueado == null || !Objects.equals(this.empleadoLogueado.getId(), empleadoId))) {
-            registrarRecepcionBolsin(empleadoId);
-        }
-        if (this.bolsinSeleccionado == null || this.bolsinSeleccionado.getNumeroBolsin() != numeroBolsin) {
-            tomarSeleccionBolsin(numeroBolsin);
-        }
-        if (opcion != 1) {
-            throw new FuncionalidadNoDisponibleException(
-                "La opción " + opcion + " aún no está disponible. Próximamente."
-            );
-        }
-        return tomarConfirmacion(confirmado);
-    }
-
     // =========================================================================
     // Métodos de apoyo del CU 28 según diagramas
     // =========================================================================
@@ -476,15 +420,15 @@ public class GestorRecepcionBolsin {
         return LocalDateTime.now();
     }
 
-    public EstadoBolsin buscarEstadoBolsinRecibido() {
-        return estadoBolsinRepository.findByNombre(EstadoBolsin.RECIBIDO_EN_CM_DESTINO)
+    public void buscarEstadoBolsinRecibido() {
+        this.estadoBolsin = estadoBolsinRepository.findByNombre(EstadoBolsin.RECIBIDO_EN_CM_DESTINO)
             .orElseThrow(() -> new IllegalStateException(
                 "Estado de bolsín '" + EstadoBolsin.RECIBIDO_EN_CM_DESTINO + "' no configurado en la base de datos."
             ));
     }
 
-    public EstadoRemito buscarEstadoRemitoRecibidoYAceptado() {
-        return estadoRemitoRepository.findByNombre(EstadoRemito.RECIBIDO_Y_ACEPTADO)
+    public void buscarEstadoRemitoRecibidoYAceptado() {
+        this.estadoRemito = estadoRemitoRepository.findByNombre(EstadoRemito.RECIBIDO_Y_ACEPTADO)
             .orElseThrow(() -> new IllegalStateException(
                 "Estado de remito '" + EstadoRemito.RECIBIDO_Y_ACEPTADO + "' no configurado en la base de datos."
             ));
@@ -497,12 +441,12 @@ public class GestorRecepcionBolsin {
         return new String[]{empleado.getNombre(), empleado.getApellido()};
     }
 
-    public void recibirBolsin(Bolsin bolsin, LocalDateTime fechaHoraActual, String[] responsable, EstadoBolsin estadoRecibido) {
-        bolsin.recibir(fechaHoraActual, responsable, estadoRecibido);
+    public void recibirBolsin(LocalDateTime fechaHoraActual, String[] responsable) {
+        this.bolsinSeleccionado.recibir(fechaHoraActual, responsable, this.estadoBolsin);
     }
 
-    public void recibirYAceptarRemitos(Bolsin bolsin, EstadoRemito estadoRemitoRecibido, LocalDateTime fechaHoraActual, String[] responsable) {
-        bolsin.recibirYAceptarRemitos(estadoRemitoRecibido, fechaHoraActual, responsable);
+    public void recibirYAceptarRemitos(LocalDateTime fechaHoraActual, String[] responsable) {
+        this.bolsinSeleccionado.recibirYAceptarRemitos(this.estadoRemito, fechaHoraActual, responsable);
     }
 
     /**
@@ -568,7 +512,7 @@ public class GestorRecepcionBolsin {
         Empleado emp = getUsuarioLogueado(empleadoId);
         return new SesionDto(
             emp.getId(),
-            emp.getNombreCompleto(),
+            emp.getNombre() + " " + emp.getApellido(),
             emp.getCM().getNombre(),
             emp.getCM().getCodigo()
         );
@@ -579,7 +523,7 @@ public class GestorRecepcionBolsin {
         return empleadoRepository.findAll().stream()
             .map(emp -> new SesionDto(
                 emp.getId(),
-                emp.getNombreCompleto(),
+                emp.getNombre() + " " + emp.getApellido(),
                 emp.getCM().getNombre(),
                 emp.getCM().getCodigo()
             ))

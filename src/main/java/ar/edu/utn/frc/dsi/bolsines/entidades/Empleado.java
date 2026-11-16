@@ -82,26 +82,9 @@ public class Empleado {
         return asignadoA;
     }
 
-    public String getNombreCompleto() {
-        return nombre + " " + apellido;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Empleado empleado = (Empleado) o;
-        return Objects.equals(id, empleado.id) || (email != null && Objects.equals(email, empleado.email));
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(email != null ? email : id);
-    }
-
     @Override
     public String toString() {
-        return getNombreCompleto();
+        return nombre + " " + apellido;
     }
 }
 

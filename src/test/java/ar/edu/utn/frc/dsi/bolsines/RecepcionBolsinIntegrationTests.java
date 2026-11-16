@@ -1,8 +1,10 @@
 package ar.edu.utn.frc.dsi.bolsines;
 
+import ar.edu.utn.frc.dsi.bolsines.control.GestorRecepcionBolsin;
 import ar.edu.utn.frc.dsi.bolsines.entidades.*;
 import ar.edu.utn.frc.dsi.bolsines.repositorios.BolsinRepository;
 import ar.edu.utn.frc.dsi.bolsines.repositorios.ComisionMedicaRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Ejecuta sobre el perfil 'test' (H2 en memoria, create-drop).
  * Verifica los endpoints del boundary PantallaRegistrarRecepcionBolsin,
  * el controlador SesionController y el manejo uniforme de errores de ManejadorExcepciones.
+ *
+ * Sigue la secuencia con estado: iniciar -> seleccionar-bolsin -> seleccionar-recepcion -> confirmar.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -41,8 +45,16 @@ class RecepcionBolsinIntegrationTests {
     @Autowired
     private ComisionMedicaRepository comisionMedicaRepository;
 
+    @Autowired
+    private GestorRecepcionBolsin gestor;
+
     private static final String EMP_CORDOBA = "1";
     private static final String EMP_VILLA_MARIA = "4";
+
+    @BeforeEach
+    void setUp() {
+        gestor.finCU();
+    }
 
     // =========================================================================
     // Sesión simulada
@@ -98,8 +110,11 @@ class RecepcionBolsinIntegrationTests {
     @Test
     @DisplayName("GET /api/recepcion-bolsin/bolsines -> sin filtros retorna los 3 bolsines enviados")
     void bolsines_sinFiltros_retornaTodos() throws Exception {
-        mockMvc.perform(get("/api/recepcion-bolsin/bolsines")
+        mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
                         .header("X-Empleado-Id", EMP_CORDOBA))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/recepcion-bolsin/bolsines"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(3)));
     }
@@ -107,12 +122,15 @@ class RecepcionBolsinIntegrationTests {
     @Test
     @DisplayName("POST /api/recepcion-bolsin/seleccionar-bolsin -> retorna detalle del bolsín 1001")
     void seleccionarBolsin_retornaDetalle() throws Exception {
+        mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
+                        .header("X-Empleado-Id", EMP_CORDOBA))
+                .andExpect(status().isOk());
+
         String body = """
                 {"numeroBolsin": 1001}
                 """;
 
         mockMvc.perform(post("/api/recepcion-bolsin/seleccionar-bolsin")
-                        .header("X-Empleado-Id", EMP_CORDOBA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
@@ -126,12 +144,22 @@ class RecepcionBolsinIntegrationTests {
     @Test
     @DisplayName("POST /api/recepcion-bolsin/seleccionar-recepcion opcion=1 -> requiereConfirmacion=true")
     void seleccionarRecepcion_opcion1_requiereConfirmacion() throws Exception {
+        mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
+                        .header("X-Empleado-Id", EMP_CORDOBA))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/recepcion-bolsin/seleccionar-bolsin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"numeroBolsin": 1001}
+                                """))
+                .andExpect(status().isOk());
+
         String body = """
                 {"numeroBolsin": 1001, "opcion": 1}
                 """;
 
         mockMvc.perform(post("/api/recepcion-bolsin/seleccionar-recepcion")
-                        .header("X-Empleado-Id", EMP_CORDOBA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
@@ -143,12 +171,29 @@ class RecepcionBolsinIntegrationTests {
     @Transactional
     @DisplayName("POST /api/recepcion-bolsin/confirmar -> actualiza estados en BD y genera notificaciones")
     void confirmarRecepcion_flujoPrincipal_actualizaEstados() throws Exception {
+        mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
+                        .header("X-Empleado-Id", EMP_CORDOBA))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/recepcion-bolsin/seleccionar-bolsin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"numeroBolsin": 1002}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/recepcion-bolsin/seleccionar-recepcion")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"numeroBolsin": 1002, "opcion": 1}
+                                """))
+                .andExpect(status().isOk());
+
         String body = """
                 {"numeroBolsin": 1002, "opcion": 1, "confirmado": true}
                 """;
 
         mockMvc.perform(post("/api/recepcion-bolsin/confirmar")
-                        .header("X-Empleado-Id", EMP_CORDOBA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
@@ -164,7 +209,11 @@ class RecepcionBolsinIntegrationTests {
         Bolsin b1002 = bolsinRepository.findByNumeroBolsin(1002).orElseThrow();
         b1002.getCambioEstado().size();
         assertFalse(b1002.sosEnviado());
-        assertEquals("Recibido en CM destino", b1002.buscarEstadoActual().getEstado().getNombre());
+        CambioEstadoBolsin ce1002 = b1002.getCambioEstado().stream()
+                .filter(CambioEstadoBolsin::esActual)
+                .findFirst()
+                .orElseThrow();
+        assertEquals("Recibido en CM destino", ce1002.getEstado().getNombre());
     }
 
     // =========================================================================
@@ -175,12 +224,29 @@ class RecepcionBolsinIntegrationTests {
     @Transactional
     @DisplayName("POST /api/recepcion-bolsin/confirmar con confirmado=false (A6) -> no modifica datos")
     void confirmarRecepcion_noConfirmado_noModificaBD() throws Exception {
+        mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
+                        .header("X-Empleado-Id", EMP_CORDOBA))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/recepcion-bolsin/seleccionar-bolsin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"numeroBolsin": 1003}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/recepcion-bolsin/seleccionar-recepcion")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"numeroBolsin": 1003, "opcion": 1}
+                                """))
+                .andExpect(status().isOk());
+
         String body = """
                 {"numeroBolsin": 1003, "opcion": 1, "confirmado": false}
                 """;
 
         mockMvc.perform(post("/api/recepcion-bolsin/confirmar")
-                        .header("X-Empleado-Id", EMP_CORDOBA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
@@ -200,25 +266,104 @@ class RecepcionBolsinIntegrationTests {
     @Transactional
     @DisplayName("POST /api/recepcion-bolsin/confirmar dos veces el mismo bolsín -> segundo intento devuelve 409")
     void confirmarRecepcion_dobleConfirmacion_devuelve409() throws Exception {
+        mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
+                        .header("X-Empleado-Id", EMP_CORDOBA))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/recepcion-bolsin/seleccionar-bolsin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"numeroBolsin": 1001}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/recepcion-bolsin/seleccionar-recepcion")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"numeroBolsin": 1001, "opcion": 1}
+                                """))
+                .andExpect(status().isOk());
+
         String body = """
                 {"numeroBolsin": 1001, "opcion": 1, "confirmado": true}
                 """;
 
         // Primer envío -> 200
         mockMvc.perform(post("/api/recepcion-bolsin/confirmar")
-                        .header("X-Empleado-Id", EMP_CORDOBA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.confirmado").value(true));
 
-        // Segundo envío -> 409
+        // Segundo envío -> 409 (porque finCU reinició el estado y no hay bolsín seleccionado)
         mockMvc.perform(post("/api/recepcion-bolsin/confirmar")
-                        .header("X-Empleado-Id", EMP_CORDOBA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.mensaje").value(containsString("1001")));
+                .andExpect(jsonPath("$.mensaje").value(containsString("Debe seleccionar un bolsín")));
+    }
+
+    // =========================================================================
+    // Confirmar fuera de secuencia -> 409 Conflict
+    // =========================================================================
+
+    @Test
+    @DisplayName("POST /api/recepcion-bolsin/confirmar sin haber seleccionado bolsín -> 409 Conflict")
+    void confirmarSinSeleccionarBolsin_devuelve409() throws Exception {
+        String body = """
+                {"numeroBolsin": 1001, "opcion": 1, "confirmado": true}
+                """;
+        mockMvc.perform(post("/api/recepcion-bolsin/confirmar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensaje").value(containsString("Debe seleccionar un bolsín")));
+    }
+
+    // =========================================================================
+    // Cambio de usuario a mitad del flujo -> reinicia estado y confirmar da 409
+    // =========================================================================
+
+    @Test
+    @DisplayName("POST /api/sesion/iniciar a mitad del flujo reinicia el estado -> confirmar devuelve 409")
+    void cambioUsuarioAMitadDeFlujo_reiniciaEstado_confirmarDevuelve409() throws Exception {
+        // 1. Iniciar recepción como Carlos Gómez (Córdoba)
+        mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
+                        .header("X-Empleado-Id", EMP_CORDOBA))
+                .andExpect(status().isOk());
+
+        // 2. Seleccionar bolsín 1001
+        mockMvc.perform(post("/api/recepcion-bolsin/seleccionar-bolsin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"numeroBolsin": 1001}
+                                """))
+                .andExpect(status().isOk());
+
+        // 3. Seleccionar recepción
+        mockMvc.perform(post("/api/recepcion-bolsin/seleccionar-recepcion")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"numeroBolsin": 1001, "opcion": 1}
+                                """))
+                .andExpect(status().isOk());
+
+        // 4. Cambiar usuario a mitad del flujo (POST /api/sesion/iniciar con Laura Torres, id=4)
+        mockMvc.perform(post("/api/sesion/iniciar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"empleadoId": 4}
+                                """))
+                .andExpect(status().isOk());
+
+        // 5. Intentar confirmar -> 409 Conflict porque el cambio de sesión llamó a finCU()
+        mockMvc.perform(post("/api/recepcion-bolsin/confirmar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"numeroBolsin": 1001, "opcion": 1, "confirmado": true}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensaje").value(containsString("Debe seleccionar un bolsín")));
     }
 
     // =========================================================================
@@ -228,8 +373,11 @@ class RecepcionBolsinIntegrationTests {
     @Test
     @DisplayName("GET /api/recepcion-bolsin/bolsines?numeroPrecinto=99999 (A1) -> 404 con mensaje")
     void filtrarBolsines_precintoInexistente_devuelve404() throws Exception {
+        mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
+                        .header("X-Empleado-Id", EMP_CORDOBA))
+                .andExpect(status().isOk());
+
         mockMvc.perform(get("/api/recepcion-bolsin/bolsines")
-                        .header("X-Empleado-Id", EMP_CORDOBA)
                         .param("numeroPrecinto", "99999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.mensaje").value(containsString("precinto")));
@@ -238,8 +386,11 @@ class RecepcionBolsinIntegrationTests {
     @Test
     @DisplayName("GET /api/recepcion-bolsin/bolsines?cmOrigen=CM+Inexistente (A2) -> 404 con mensaje")
     void filtrarBolsines_cmOrigenInexistente_devuelve404() throws Exception {
+        mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
+                        .header("X-Empleado-Id", EMP_CORDOBA))
+                .andExpect(status().isOk());
+
         mockMvc.perform(get("/api/recepcion-bolsin/bolsines")
-                        .header("X-Empleado-Id", EMP_CORDOBA)
                         .param("cmOrigen", "CM Inexistente"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.mensaje").value(containsString("comisión médica")));
@@ -265,12 +416,22 @@ class RecepcionBolsinIntegrationTests {
     @Test
     @DisplayName("POST /api/recepcion-bolsin/seleccionar-recepcion opcion=2 -> 501")
     void seleccionarRecepcion_opcion2_devuelve501() throws Exception {
+        mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
+                        .header("X-Empleado-Id", EMP_CORDOBA))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/recepcion-bolsin/seleccionar-bolsin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"numeroBolsin": 1001}
+                                """))
+                .andExpect(status().isOk());
+
         String body = """
                 {"numeroBolsin": 1001, "opcion": 2}
                 """;
 
         mockMvc.perform(post("/api/recepcion-bolsin/seleccionar-recepcion")
-                        .header("X-Empleado-Id", EMP_CORDOBA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isNotImplemented())
@@ -284,8 +445,7 @@ class RecepcionBolsinIntegrationTests {
     @Test
     @DisplayName("POST /api/recepcion-bolsin/cancelar -> 204")
     void cancelar_devuelve204() throws Exception {
-        mockMvc.perform(post("/api/recepcion-bolsin/cancelar")
-                        .header("X-Empleado-Id", EMP_CORDOBA))
+        mockMvc.perform(post("/api/recepcion-bolsin/cancelar"))
                 .andExpect(status().isNoContent());
     }
 
@@ -300,13 +460,12 @@ class RecepcionBolsinIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(2))))
                 .andExpect(jsonPath("$[0].nombre").isNotEmpty())
-                // Verifica orden alfabético: el primer nombre <= el segundo
                 .andExpect(result -> {
                     com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                     var list = mapper.readTree(result.getResponse().getContentAsString());
                     String primero = list.get(0).get("nombre").asText();
                     String segundo = list.get(1).get("nombre").asText();
-                    org.junit.jupiter.api.Assertions.assertTrue(
+                    assertTrue(
                         primero.compareToIgnoreCase(segundo) <= 0,
                         "Las comisiones médicas no están ordenadas alfabéticamente: '" + primero + "' > '" + segundo + "'"
                     );
@@ -321,7 +480,6 @@ class RecepcionBolsinIntegrationTests {
     @DisplayName("GET /api/recepcion-bolsin/bolsines?numeroPrecinto=abc -> 400 con mensaje")
     void filtrarBolsines_precintoConLetras_devuelve400() throws Exception {
         mockMvc.perform(get("/api/recepcion-bolsin/bolsines")
-                        .header("X-Empleado-Id", EMP_CORDOBA)
                         .param("numeroPrecinto", "abc"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.mensaje").value("El valor ingresado para 'numeroPrecinto' no es válido."));
@@ -331,7 +489,6 @@ class RecepcionBolsinIntegrationTests {
     @DisplayName("GET /api/recepcion-bolsin/bolsines?numeroPrecinto=99999999999 -> 400 con mensaje")
     void filtrarBolsines_precintoEnorme_devuelve400() throws Exception {
         mockMvc.perform(get("/api/recepcion-bolsin/bolsines")
-                        .header("X-Empleado-Id", EMP_CORDOBA)
                         .param("numeroPrecinto", "99999999999"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.mensaje").value("El valor ingresado para 'numeroPrecinto' no es válido."));
@@ -350,11 +507,9 @@ class RecepcionBolsinIntegrationTests {
     @DisplayName("POST /api/recepcion-bolsin/confirmar con body vacío -> 400 con mensaje")
     void confirmar_bodyVacio_devuelve400() throws Exception {
         mockMvc.perform(post("/api/recepcion-bolsin/confirmar")
-                        .header("X-Empleado-Id", EMP_CORDOBA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(""))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.mensaje").value("La solicitud tiene un formato inválido o está vacía."));
     }
 }
-

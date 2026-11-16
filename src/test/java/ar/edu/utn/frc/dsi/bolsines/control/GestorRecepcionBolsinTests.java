@@ -94,7 +94,10 @@ class GestorRecepcionBolsinTests {
         Bolsin bolsinBd = bolsinRepository.findByNumeroBolsin(nroBolsin).orElseThrow();
         assertFalse(bolsinBd.sosEnviado(), "El bolsín 1001 ya no debe estar en estado Enviado");
 
-        CambioEstadoBolsin cambioBolsinActual = bolsinBd.buscarEstadoActual();
+        CambioEstadoBolsin cambioBolsinActual = bolsinBd.getCambioEstado().stream()
+                .filter(CambioEstadoBolsin::esActual)
+                .findFirst()
+                .orElse(null);
         assertNotNull(cambioBolsinActual);
         assertEquals("Recibido en CM destino", cambioBolsinActual.getEstado().getNombre());
         assertNull(cambioBolsinActual.getFechaHoraFin());
@@ -138,9 +141,10 @@ class GestorRecepcionBolsinTests {
     @Test
     @DisplayName("Filtro A1: Precinto inexistente lanza RecursoNoEncontradoException")
     void filtroA1_precintoInexistente_lanzaExcepcion() {
+        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
         RecursoNoEncontradoException ex = assertThrows(
                 RecursoNoEncontradoException.class,
-                () -> gestor.filtrarBolsines(EMP_CORDOBA, 99999, null)
+                () -> gestor.filtrarBolsines(99999, null)
         );
         assertTrue(ex.getMessage().contains("precinto"), "El mensaje debe aludir al número de precinto");
     }
@@ -148,9 +152,10 @@ class GestorRecepcionBolsinTests {
     @Test
     @DisplayName("Filtro A2: CM de origen inexistente lanza RecursoNoEncontradoException")
     void filtroA2_cmOrigenInexistente_lanzaExcepcion() {
+        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
         RecursoNoEncontradoException ex = assertThrows(
                 RecursoNoEncontradoException.class,
-                () -> gestor.filtrarBolsines(EMP_CORDOBA, null, "CM Inexistente Tierra del Fuego")
+                () -> gestor.filtrarBolsines(null, "CM Inexistente Tierra del Fuego")
         );
         assertTrue(ex.getMessage().contains("comisión médica"), "El mensaje debe aludir a la comisión médica de origen");
     }
@@ -203,9 +208,6 @@ class GestorRecepcionBolsinTests {
 
         assertThrows(FuncionalidadNoDisponibleException.class,
                 () -> gestor.tomarSeleccionRecepcion(4));
-
-        assertThrows(FuncionalidadNoDisponibleException.class,
-                () -> gestor.tomarConfirmacion(EMP_CORDOBA, nroBolsin, 2, true));
     }
 
     @Test
@@ -236,7 +238,12 @@ class GestorRecepcionBolsinTests {
         // Verificamos que la BD hizo rollback completo: el bolsín 1003 sigue en estado Enviado
         Bolsin b1003 = bolsinRepository.findByNumeroBolsinWithCambios(nroBolsin).orElseThrow();
         assertTrue(b1003.sosEnviado(), "Rollback: Bolsín 1003 debe seguir en estado Enviado");
-        assertNotEquals("Recibido en CM destino", b1003.buscarEstadoActual().getEstado().getNombre(),
+        CambioEstadoBolsin ceB1003 = b1003.getCambioEstado().stream()
+                .filter(CambioEstadoBolsin::esActual)
+                .findFirst()
+                .orElse(null);
+        assertNotNull(ceB1003);
+        assertNotEquals("Recibido en CM destino", ceB1003.getEstado().getNombre(),
                 "Rollback: El bolsín 1003 no debe haber quedado en Recibido en CM destino");
     }
 

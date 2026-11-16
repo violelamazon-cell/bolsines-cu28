@@ -89,14 +89,6 @@ public class ComisionMedica {
         return this.nombre != null && !this.nombre.trim().isEmpty();
     }
 
-    public boolean esDeOrigen(String cmOrigen) {
-        if (cmOrigen == null || cmOrigen.trim().isEmpty()) {
-            return false;
-        }
-        return this.nombre.equalsIgnoreCase(cmOrigen.trim()) ||
-               this.codigo.equalsIgnoreCase(cmOrigen.trim());
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
