@@ -37,6 +37,9 @@ class GestorRecepcionBolsinTests {
     private SesionService sesionService;
 
     @Autowired
+    private ConsultasService consultasService;
+
+    @Autowired
     private BolsinRepository bolsinRepository;
 
     @Autowired
@@ -139,7 +142,7 @@ class GestorRecepcionBolsinTests {
     void filtrarBolsines_porNumeroPrecinto_filtraCorrectamente() {
         gestor.registrarRecepcionBolsin();
 
-        List<BolsinResumenDto> filtrados = gestor.filtrarBolsines(50001, null);
+        List<BolsinResumenDto> filtrados = consultasService.filtrarBolsines(50001, null);
         assertEquals(1, filtrados.size());
         assertEquals(1001, filtrados.get(0).numeroBolsin());
         assertEquals(50001, filtrados.get(0).numeroPrecinto());
@@ -151,7 +154,7 @@ class GestorRecepcionBolsinTests {
     void filtrarBolsines_porCmOrigen_filtraCorrectamente() {
         gestor.registrarRecepcionBolsin();
 
-        List<BolsinResumenDto> filtrados = gestor.filtrarBolsines(null, "CM Mendoza");
+        List<BolsinResumenDto> filtrados = consultasService.filtrarBolsines(null, "CM Mendoza");
         assertEquals(1, filtrados.size());
         assertEquals(1001, filtrados.get(0).numeroBolsin());
         assertEquals("CM Mendoza", filtrados.get(0).cmOrigen());
@@ -163,7 +166,7 @@ class GestorRecepcionBolsinTests {
     void filtrarBolsines_sinFiltros_devuelveTodos() {
         gestor.registrarRecepcionBolsin();
 
-        List<BolsinResumenDto> filtrados = gestor.filtrarBolsines(null, null);
+        List<BolsinResumenDto> filtrados = consultasService.filtrarBolsines(null, null);
         assertEquals(3, filtrados.size());
     }
 
@@ -174,7 +177,7 @@ class GestorRecepcionBolsinTests {
         gestor.registrarRecepcionBolsin();
         RecursoNoEncontradoException ex = assertThrows(
                 RecursoNoEncontradoException.class,
-                () -> gestor.filtrarBolsines(99999, null));
+                () -> consultasService.filtrarBolsines(99999, null));
         assertTrue(ex.getMessage().contains("99999"), "El mensaje debe referenciar el precinto buscado");
     }
 
@@ -185,7 +188,7 @@ class GestorRecepcionBolsinTests {
         gestor.registrarRecepcionBolsin();
         RecursoNoEncontradoException ex = assertThrows(
                 RecursoNoEncontradoException.class,
-                () -> gestor.filtrarBolsines(null, "CM Inexistente"));
+                () -> consultasService.filtrarBolsines(null, "CM Inexistente"));
         assertTrue(ex.getMessage().contains("CM Inexistente"), "El mensaje debe referenciar la CM buscada");
     }
 
@@ -313,5 +316,15 @@ class GestorRecepcionBolsinTests {
         sesionService.login("laura", "1234");
         assertNull(gestor.getBolsinSeleccionado());
         assertNull(gestor.getEmpleadoLogueado());
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("ConsultasService: listarComisionesMedicas devuelve todas las CM ordenadas")
+    void listarComisionesMedicas_devuelveListaOrdenada() {
+        List<ComisionMedicaDto> cms = consultasService.listarComisionesMedicas();
+        assertNotNull(cms);
+        assertFalse(cms.isEmpty());
+        assertTrue(cms.size() >= 5);
     }
 }

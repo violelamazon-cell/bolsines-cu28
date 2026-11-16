@@ -1,7 +1,7 @@
 package ar.edu.utn.frc.dsi.bolsines.boundary;
 
 import ar.edu.utn.frc.dsi.bolsines.boundary.dto.ComisionMedicaDto;
-import ar.edu.utn.frc.dsi.bolsines.control.GestorRecepcionBolsin;
+import ar.edu.utn.frc.dsi.bolsines.control.ConsultasService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,16 +13,16 @@ import java.util.List;
  * ComisionMedicaController – expone el catálogo de Comisiones Médicas
  * para uso del frontend (desplegable de filtro de CM origen en el Paso 1).
  *
- * Responsabilidad ÚNICA: recibir la petición HTTP, delegar al Gestor y devolver el DTO.
+ * Responsabilidad ÚNICA: recibir la petición HTTP, delegar a ConsultasService y devolver el DTO.
  */
 @RestController
 @RequestMapping("/api/comisiones-medicas")
 public class ComisionMedicaController {
 
-    private final GestorRecepcionBolsin gestor;
+    private final ConsultasService consultasService;
 
-    public ComisionMedicaController(GestorRecepcionBolsin gestor) {
-        this.gestor = gestor;
+    public ComisionMedicaController(ConsultasService consultasService) {
+        this.consultasService = consultasService;
     }
 
     /**
@@ -33,7 +33,6 @@ public class ComisionMedicaController {
      */
     @GetMapping
     public ResponseEntity<List<ComisionMedicaDto>> listarComisionesMedicas() {
-        return ResponseEntity.ok(gestor.listarComisionesMedicas());
+        return ResponseEntity.ok(consultasService.listarComisionesMedicas());
     }
 }
-

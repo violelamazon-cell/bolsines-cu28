@@ -39,7 +39,6 @@ public class GestorRecepcionBolsin {
     private final EmpleadoRepository empleadoRepository;
     private final EstadoBolsinRepository estadoBolsinRepository;
     private final EstadoRemitoRepository estadoRemitoRepository;
-    private final ComisionMedicaRepository comisionMedicaRepository;
     private final NotificadorEmail notificadorEmail;
     private final SesionRepository sesionRepository;
 
@@ -55,14 +54,12 @@ public class GestorRecepcionBolsin {
             EmpleadoRepository empleadoRepository,
             EstadoBolsinRepository estadoBolsinRepository,
             EstadoRemitoRepository estadoRemitoRepository,
-            ComisionMedicaRepository comisionMedicaRepository,
             NotificadorEmail notificadorEmail,
             SesionRepository sesionRepository) {
         this.bolsinRepository = bolsinRepository;
         this.empleadoRepository = empleadoRepository;
         this.estadoBolsinRepository = estadoBolsinRepository;
         this.estadoRemitoRepository = estadoRemitoRepository;
-        this.comisionMedicaRepository = comisionMedicaRepository;
         this.notificadorEmail = notificadorEmail;
         this.sesionRepository = sesionRepository;
 
@@ -177,50 +174,6 @@ public class GestorRecepcionBolsin {
                 .collect(Collectors.toList());
     }
 
-    // =========================================================================
-    // CU 28 – Paso 4: Filtros de búsqueda (Flujos Alternativos A1 y A2)
-    // =========================================================================
-
-    /**
-     * CU 28 Paso 4: Filtra sobre la colección bolsinesEnviados del Gestor por
-     * número de precinto (A1)
-     * o Comisión Médica de origen (A2).
-     */
-    @Transactional(readOnly = true)
-    public List<BolsinResumenDto> filtrarBolsines(Integer numeroPrecinto, String cmOrigen) {
-        if (this.bolsinesEnviados == null || this.bolsinesEnviados.isEmpty()) {
-            registrarRecepcionBolsin();
-        }
-
-        List<Bolsin> filtrados = this.bolsinesEnviados;
-
-        if (numeroPrecinto != null) {
-            filtrados = filtrados.stream()
-                    .filter(b -> b.getNroPrecinto() == numeroPrecinto)
-                    .collect(Collectors.toList());
-            if (filtrados.isEmpty()) {
-                throw new RecursoNoEncontradoException(
-                        "No se encontró un bolsín con el número de precinto ingresado: " + numeroPrecinto);
-            }
-        }
-
-        if (cmOrigen != null && !cmOrigen.isBlank()) {
-            filtrados = filtrados.stream()
-                    .filter(b -> b.buscarCMOrigen().toLowerCase().contains(cmOrigen.toLowerCase()))
-                    .collect(Collectors.toList());
-            if (filtrados.isEmpty()) {
-                throw new RecursoNoEncontradoException(
-                        "No se encontró un bolsín con la comisión médica de origen ingresada: " + cmOrigen);
-            }
-        }
-
-        return filtrados.stream()
-                .map(b -> new BolsinResumenDto(
-                        b.getNumeroBolsin(),
-                        b.buscarCMOrigen(),
-                        b.getNroPrecinto()))
-                .collect(Collectors.toList());
-    }
 
     // =========================================================================
     // CU 28 – Pasos 5 a 7: Tomar selección de bolsín y mostrar remitos/opciones
@@ -504,18 +457,6 @@ public class GestorRecepcionBolsin {
         log.debug("CU 28 finCU: estado del gestor reiniciado.");
     }
 
-    public void cancelar() {
-        finCU();
-    }
-
-
-    @Transactional(readOnly = true)
-    public List<ComisionMedicaDto> listarComisionesMedicas() {
-        return comisionMedicaRepository.findAll().stream()
-                .map(cm -> new ComisionMedicaDto(cm.getNombre()))
-                .sorted(Comparator.comparing(ComisionMedicaDto::nombre))
-                .collect(Collectors.toList());
-    }
 
     // =========================================================================
     // Métodos auxiliares privados

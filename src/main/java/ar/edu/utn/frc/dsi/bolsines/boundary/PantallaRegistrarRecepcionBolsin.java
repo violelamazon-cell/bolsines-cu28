@@ -1,6 +1,7 @@
 package ar.edu.utn.frc.dsi.bolsines.boundary;
 
 import ar.edu.utn.frc.dsi.bolsines.boundary.dto.*;
+import ar.edu.utn.frc.dsi.bolsines.control.ConsultasService;
 import ar.edu.utn.frc.dsi.bolsines.control.GestorRecepcionBolsin;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,9 +22,11 @@ import java.util.List;
 public class PantallaRegistrarRecepcionBolsin {
 
     private final GestorRecepcionBolsin gestor;
+    private final ConsultasService consultasService;
 
-    public PantallaRegistrarRecepcionBolsin(GestorRecepcionBolsin gestor) {
+    public PantallaRegistrarRecepcionBolsin(GestorRecepcionBolsin gestor, ConsultasService consultasService) {
         this.gestor = gestor;
+        this.consultasService = consultasService;
     }
 
     /**
@@ -47,7 +50,7 @@ public class PantallaRegistrarRecepcionBolsin {
     public ResponseEntity<List<BolsinResumenDto>> habilitarPantalla(
             @RequestParam(required = false) Integer numeroPrecinto,
             @RequestParam(name = "cmOrigen", required = false) String cmOrigen) {
-        List<BolsinResumenDto> bolsines = gestor.filtrarBolsines(numeroPrecinto, cmOrigen);
+        List<BolsinResumenDto> bolsines = consultasService.filtrarBolsines(numeroPrecinto, cmOrigen);
         return ResponseEntity.ok(bolsines);
     }
 
@@ -95,14 +98,14 @@ public class PantallaRegistrarRecepcionBolsin {
 
     /**
      * CU 28 Observación 1: Cancelar proceso de recepción.
-     * Corresponde a cancelar() del diagrama.
+     * Corresponde a finCU() del diagrama.
      *
      * POST /api/recepcion-bolsin/cancelar
      * Respuesta 204: No Content.
      */
     @PostMapping("/cancelar")
     public ResponseEntity<Void> cancelar() {
-        gestor.cancelar();
+        gestor.finCU();
         return ResponseEntity.noContent().build();
     }
 
