@@ -79,14 +79,8 @@
     } else if (hash === 'recepcion') {
       actualizarHeaderRecepcion();
     } else if (hash === 'login') {
-      // Limpiar estado persistente de selección al volver al login
-      if (loginEl && loginEl.grid) {
-        loginEl.grid.querySelectorAll('.login-user-card').forEach(c => {
-          c.classList.remove('selected');
-          c.disabled = false;
-          c.removeAttribute('aria-busy');
-        });
-      }
+      if (loginEl.error) loginEl.error.hidden = true;
+      if (loginEl.password) loginEl.password.value = '';
     }
   }
 
@@ -98,10 +92,14 @@
   // Elementos del DOM – Login
   // =========================================================================
   const loginEl = {
-    cargando: document.getElementById('login-cargando'),
     error: document.getElementById('login-error'),
     errorMsg: document.getElementById('login-error-msg'),
-    grid: document.getElementById('login-grid')
+    form: document.getElementById('form-login'),
+    usuario: document.getElementById('login-usuario'),
+    password: document.getElementById('login-password'),
+    btnSubmit: document.getElementById('btn-login-submit'),
+    spinner: document.getElementById('login-btn-spinner'),
+    btnText: document.getElementById('login-btn-text')
   };
 
   // =========================================================================
@@ -266,7 +264,6 @@
   async function apiFetch(url, options = {}) {
     const headers = new Headers(options.headers || {});
     if (!headers.has('Accept')) headers.set('Accept', 'application/json');
-    if (state.currentEmpleadoId) headers.set('X-Empleado-Id', String(state.currentEmpleadoId));
     return fetch(url, { ...options, headers });
   }
 
@@ -274,118 +271,68 @@
   // Login
   // =========================================================================
 
-  async function cargarLogin() {
-    loginEl.cargando.hidden = false;
-    loginEl.error.hidden = true;
-    loginEl.grid.innerHTML = '';
+  async function onSubmitLogin(e) {
+    if (e) e.preventDefault();
+    const usuario = loginEl.usuario ? loginEl.usuario.value.trim() : '';
+    const password = loginEl.password ? loginEl.password.value.trim() : '';
 
-    try {
-      const res = await fetch('/api/sesion/empleados');
-      loginEl.cargando.hidden = true;
-
-      if (!res.ok) throw new Error('Error al cargar empleados');
-      const data = await res.json();
-      const empleados = Array.isArray(data) ? data : (data?.empleados || []);
-      state.empleados = empleados;
-      renderLoginGrid(empleados);
-    } catch (err) {
-      loginEl.cargando.hidden = true;
-      loginEl.error.hidden = false;
-      loginEl.errorMsg.textContent = 'No se pudieron cargar los usuarios. Recargá la página.';
-    }
-  }
-
-  function renderLoginGrid(empleados) {
-    loginEl.grid.innerHTML = '';
-    if (!empleados || empleados.length === 0) {
-      loginEl.error.hidden = false;
-      loginEl.errorMsg.textContent = 'No hay usuarios disponibles.';
+    if (!usuario || !password) {
+      mostrarErrorLogin('Ingresá usuario y contraseña.');
       return;
     }
 
-    empleados.forEach(emp => {
-      const id = extraerEmpleadoId(emp);
-      const nombre = extraerNombreCompleto(emp);
-      const cm = extraerNombreCm(emp);
-      const iniciales = obtenerIniciales(nombre);
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'login-user-card';
-      btn.setAttribute('role', 'listitem');
-      btn.setAttribute('aria-label', `Iniciar sesión como ${nombre}, ${cm}`);
-      btn.dataset.empleadoId = String(id);
-
-      btn.innerHTML = `
-        <span class="login-user-avatar" aria-hidden="true">${escapeHtml(iniciales)}</span>
-        <span class="login-user-info-text">
-          <span class="login-user-nombre">${escapeHtml(nombre)}</span>
-          <span class="login-user-cm">${escapeHtml(cm)}</span>
-        </span>
-      `;
-
-      btn.addEventListener('click', () => iniciarSesion(emp, btn));
-      btn.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); iniciarSesion(emp, btn); }
-      });
-
-      loginEl.grid.appendChild(btn);
-    });
-  }
-
-  async function iniciarSesion(emp, btnEl) {
-    const id = extraerEmpleadoId(emp);
-
-    // Deshabilitar todas las tarjetas mientras procesa
-    loginEl.grid.querySelectorAll('.login-user-card').forEach(c => {
-      c.setAttribute('aria-busy', 'true');
-      c.disabled = true;
-    });
-    if (btnEl) btnEl.classList.add('selected');
+    setLoginCargando(true);
 
     try {
-      const res = await fetch('/api/sesion/iniciar', {
+      const res = await fetch('/api/sesion/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ empleadoId: id })
+        body: JSON.stringify({ usuario, password })
       });
 
-      let sesionData = null;
-      try { sesionData = await res.json(); } catch (_) {}
+      const data = await res.json();
 
-      // Leer CM de la respuesta de /iniciar o del objeto empleado
-      const cm = extraerNombreCm(sesionData) || extraerNombreCm(emp);
-      const nombre = extraerNombreCompleto(sesionData) || extraerNombreCompleto(emp);
+      if (!res.ok) {
+        throw new Error(data.mensaje || 'Usuario o contraseña incorrectos.');
+      }
 
-      state.currentEmpleadoId = id;
-      state.currentNombreCompleto = nombre;
-      state.currentPrimerNombre = extraerPrimerNombre(nombre);
-      state.currentComisionMedica = cm;
-
-    } catch (err) {
-      // Si falla el POST, igual permitimos entrar con los datos del empleado
-      state.currentEmpleadoId = id;
-      state.currentNombreCompleto = extraerNombreCompleto(emp);
+      state.currentEmpleadoId = data.empleadoId;
+      state.currentNombreCompleto = data.nombreCompleto || usuario;
       state.currentPrimerNombre = extraerPrimerNombre(state.currentNombreCompleto);
-      state.currentComisionMedica = extraerNombreCm(emp);
+      state.currentComisionMedica = data.nombreCm || '';
+      state.currentCodigoCm = data.codigoCm || '';
+
+      setLoginCargando(false);
+      navigate('inicio');
+    } catch (err) {
+      setLoginCargando(false);
+      mostrarErrorLogin(err.message || 'Error al iniciar sesión.');
     }
-
-    // Restaurar tarjetas
-    loginEl.grid.querySelectorAll('.login-user-card').forEach(c => {
-      c.removeAttribute('aria-busy');
-      c.disabled = false;
-    });
-
-    navigate('inicio');
   }
 
-  function cerrarSesion() {
+  function mostrarErrorLogin(msg) {
+    if (loginEl.error) {
+      loginEl.error.hidden = false;
+      if (loginEl.errorMsg) loginEl.errorMsg.textContent = msg;
+    }
+  }
+
+  function setLoginCargando(cargando) {
+    if (loginEl.btnSubmit) loginEl.btnSubmit.disabled = cargando;
+    if (loginEl.spinner) loginEl.spinner.hidden = !cargando;
+    if (loginEl.btnText) loginEl.btnText.textContent = cargando ? 'Ingresando…' : 'Ingresar';
+  }
+
+  async function cerrarSesion() {
+    try {
+      await fetch('/api/sesion/logout', { method: 'POST' });
+    } catch (_) {}
+
     state.currentEmpleadoId = null;
     state.currentNombreCompleto = '';
     state.currentPrimerNombre = '';
     state.currentComisionMedica = '';
     state.currentCodigoCm = '';
-    // Limpiar estado del asistente
     reiniciarEstadoAsistente();
     navigate('login');
   }
@@ -1127,7 +1074,7 @@
 
   function inicializarEventos() {
     // --- Login ---
-    // (las tarjetas se crean dinámicamente con addEventListener en renderLoginGrid)
+    if (loginEl.form) loginEl.form.addEventListener('submit', onSubmitLogin);
 
     // --- Homepage ---
     if (homeEl.btnComenzarCU28) homeEl.btnComenzarCU28.addEventListener('click', comenzarCU28);
@@ -1190,7 +1137,7 @@
 
     // Intentar recuperar la sesión activa al cargar
     try {
-      const res = await fetch('/api/sesion?empleadoId=1', { headers: { Accept: 'application/json' } });
+      const res = await fetch('/api/sesion', { headers: { Accept: 'application/json' } });
       if (res.ok) {
         const data = await res.json();
         const id = data.id ?? data.empleadoId;
@@ -1199,16 +1146,8 @@
           state.currentNombreCompleto = data.nombreCompleto || `Empleado ${id}`;
           state.currentPrimerNombre = extraerPrimerNombre(state.currentNombreCompleto);
           state.currentComisionMedica = extraerNombreCm(data) || data.cm || '';
+          state.currentCodigoCm = data.codigoCm || '';
         }
-      }
-    } catch (_) {}
-
-    // Cargar lista de empleados (necesaria para renderizar el login)
-    try {
-      const res = await fetch('/api/sesion/empleados', { headers: { Accept: 'application/json' } });
-      if (res.ok) {
-        const data = await res.json();
-        state.empleados = Array.isArray(data) ? data : (data?.empleados || []);
       }
     } catch (_) {}
 
@@ -1216,7 +1155,6 @@
     const hash = getHash();
 
     if (hash === 'login' || !state.currentEmpleadoId) {
-      await cargarLogin();
       navigate('login', false);
     } else {
       navigate(hash, false);

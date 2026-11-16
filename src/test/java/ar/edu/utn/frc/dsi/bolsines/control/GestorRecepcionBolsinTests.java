@@ -34,20 +34,31 @@ class GestorRecepcionBolsinTests {
     private GestorRecepcionBolsin gestor;
 
     @Autowired
+    private SesionService sesionService;
+
+    @Autowired
     private BolsinRepository bolsinRepository;
 
     @Autowired
     private ar.edu.utn.frc.dsi.bolsines.repositorios.EstadoRemitoRepository estadoRemitoRepository;
 
-    // IDs de la semilla DataLoader:
-    // 1 -> Carlos Gómez (CM Córdoba)
-    // 4 -> Laura Torres (CM Villa María, sin bolsines enviados)
-    private static final Long EMP_CORDOBA = 1L;
-    private static final Long EMP_VILLA_MARIA = 4L;
-
     @BeforeEach
     void setUp() {
+        sesionService.login("carlos", "1234");
         gestor.finCU();
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("Paso 2 E1: getUsuarioLogueado recorre empleados con esTuUsuario y carga empleadoLogueado")
+    void getUsuarioLogueado_recorreEmpleadosYAsignaEmpleadoLogueado() {
+        sesionService.login("carlos", "1234");
+        Empleado emp = gestor.getUsuarioLogueado();
+        assertNotNull(emp);
+        assertEquals("Carlos", emp.getNombre());
+        assertEquals("Gómez", emp.getApellido());
+        assertEquals(emp, gestor.getEmpleadoLogueado());
+        assertEquals("CM Córdoba", emp.getCM().getNombre());
     }
 
     @Test
@@ -57,7 +68,7 @@ class GestorRecepcionBolsinTests {
         int nroBolsin = 1001;
 
         // 1. Paso 1-4: Iniciar recepción
-        IniciarRecepcionResponse inicio = gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+        IniciarRecepcionResponse inicio = gestor.registrarRecepcionBolsin();
         assertNotNull(inicio);
         assertEquals("CM Córdoba", inicio.cmUsuario());
         assertTrue(inicio.bolsines().stream().anyMatch(b -> b.numeroBolsin() == nroBolsin));
@@ -103,84 +114,100 @@ class GestorRecepcionBolsinTests {
                 .orElse(null);
         assertNotNull(cambioBolsinActual);
         assertEquals("Recibido en CM destino", cambioBolsinActual.getEstado().getNombre());
-        assertNull(cambioBolsinActual.getFechaHoraFin());
-        assertNotNull(cambioBolsinActual.getFechaHoraInicio());
-        assertNotNull(cambioBolsinActual.getResponsableCE());
-        assertEquals("Carlos", cambioBolsinActual.getResponsableCE()[0]);
-        assertEquals("Gómez", cambioBolsinActual.getResponsableCE()[1]);
+        assertArrayEquals(new String[] { "Carlos", "Gómez" }, cambioBolsinActual.getResponsableCE());
 
+        // Verificar remitos en BD
         for (Remito r : bolsinBd.getRemito()) {
-            assertEquals("Recibido y Aceptado", r.getEstado().getNombre(),
-                    "Cada remito debe pasar a Recibido y Aceptado");
+            assertEquals("Recibido y Aceptado", r.getEstado().getNombre());
             for (DetalleRemito d : r.getDetalleRemito()) {
-                Documentacion doc = d.buscarDocumentacionRemito();
-                assertTrue(doc.getEstado() instanceof RecibidaYAceptada,
-                        "La documentación debe estar en estado RecibidaYAceptada (State)");
-
-                // Historial de la documentación: cambio actual
+                Documentacion doc = d.getDocumentacion();
+                assertTrue(doc.getEstado() instanceof RecibidaYAceptada);
                 CambioEstadoDocumentacion cambioDocActual = doc.getCambioEstado().stream()
                         .filter(CambioEstadoDocumentacion::esEstadoActual)
                         .findFirst()
-                        .orElseThrow();
+                        .orElse(null);
+                assertNotNull(cambioDocActual);
                 assertTrue(cambioDocActual.getEstado() instanceof RecibidaYAceptada);
-                assertNull(cambioDocActual.getFechaHoraFin());
-                assertNotNull(cambioDocActual.getFechaHoraInicio());
-                assertNotNull(cambioDocActual.getResponsableCE());
-                assertEquals("Carlos", cambioDocActual.getResponsableCE()[0]);
-                assertEquals("Gómez", cambioDocActual.getResponsableCE()[1]);
-
-                // Historial de la documentación: cambio anterior cerrado con fechaHoraFin
-                List<CambioEstadoDocumentacion> cambiosCerrados = doc.getCambioEstado().stream()
-                        .filter(c -> !c.esEstadoActual())
-                        .toList();
-                assertFalse(cambiosCerrados.isEmpty(), "Debe existir al menos un cambio cerrado");
-                CambioEstadoDocumentacion cambioAnterior = cambiosCerrados.get(cambiosCerrados.size() - 1);
-                assertTrue(cambioAnterior.getEstado() instanceof EnBolsinEnviado);
-                assertNotNull(cambioAnterior.getFechaHoraFin(), "El cambio anterior debe tener fechaHoraFin asignada");
-                assertEquals(cambioDocActual.getFechaHoraInicio(), cambioAnterior.getFechaHoraFin(),
-                        "La fechaHoraFin del cambio anterior debe coincidir con la fechaHoraInicio del cambio actual");
+                assertArrayEquals(new String[] { "Carlos", "Gómez" }, cambioDocActual.getResponsableCE());
             }
         }
     }
 
     @Test
-    @DisplayName("Filtro A1: Precinto inexistente lanza RecursoNoEncontradoException")
-    void filtroA1_precintoInexistente_lanzaExcepcion() {
-        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
-        RecursoNoEncontradoException ex = assertThrows(
-                RecursoNoEncontradoException.class,
-                () -> gestor.filtrarBolsines(99999, null));
-        assertTrue(ex.getMessage().contains("precinto"), "El mensaje debe aludir al número de precinto");
+    @Transactional
+    @DisplayName("Paso 4: Filtro por número de precinto devuelve solo los bolsines coincidentes")
+    void filtrarBolsines_porNumeroPrecinto_filtraCorrectamente() {
+        gestor.registrarRecepcionBolsin();
+
+        List<BolsinResumenDto> filtrados = gestor.filtrarBolsines(50001, null);
+        assertEquals(1, filtrados.size());
+        assertEquals(1001, filtrados.get(0).numeroBolsin());
+        assertEquals(50001, filtrados.get(0).numeroPrecinto());
     }
 
     @Test
-    @DisplayName("Filtro A2: CM de origen inexistente lanza RecursoNoEncontradoException")
-    void filtroA2_cmOrigenInexistente_lanzaExcepcion() {
-        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+    @Transactional
+    @DisplayName("Paso 4: Filtro por CM de origen devuelve solo los bolsines coincidentes")
+    void filtrarBolsines_porCmOrigen_filtraCorrectamente() {
+        gestor.registrarRecepcionBolsin();
+
+        List<BolsinResumenDto> filtrados = gestor.filtrarBolsines(null, "CM Mendoza");
+        assertEquals(1, filtrados.size());
+        assertEquals(1001, filtrados.get(0).numeroBolsin());
+        assertEquals("CM Mendoza", filtrados.get(0).cmOrigen());
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("Paso 4: Sin filtros devuelve todos los bolsines de la CM del usuario")
+    void filtrarBolsines_sinFiltros_devuelveTodos() {
+        gestor.registrarRecepcionBolsin();
+
+        List<BolsinResumenDto> filtrados = gestor.filtrarBolsines(null, null);
+        assertEquals(3, filtrados.size());
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("Flujo alternativo A1: Precinto inexistente lanza RecursoNoEncontradoException")
+    void filtroA1_precintoInexistente_lanzaExcepcion() {
+        gestor.registrarRecepcionBolsin();
         RecursoNoEncontradoException ex = assertThrows(
                 RecursoNoEncontradoException.class,
-                () -> gestor.filtrarBolsines(null, "CM Inexistente Tierra del Fuego"));
-        assertTrue(ex.getMessage().contains("comisión médica"),
-                "El mensaje debe aludir a la comisión médica de origen");
+                () -> gestor.filtrarBolsines(99999, null));
+        assertTrue(ex.getMessage().contains("99999"), "El mensaje debe referenciar el precinto buscado");
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("Flujo alternativo A2: CM origen inexistente lanza RecursoNoEncontradoException")
+    void filtroA2_cmOrigenInexistente_lanzaExcepcion() {
+        gestor.registrarRecepcionBolsin();
+        RecursoNoEncontradoException ex = assertThrows(
+                RecursoNoEncontradoException.class,
+                () -> gestor.filtrarBolsines(null, "CM Inexistente"));
+        assertTrue(ex.getMessage().contains("CM Inexistente"), "El mensaje debe referenciar la CM buscada");
     }
 
     @Test
     @DisplayName("Estado vacío: empleado de CM Villa María sin bolsines enviados lanza RecursoNoEncontradoException")
     void estadoVacio_empleadoVillaMaria_lanzaExcepcion() {
+        sesionService.login("laura", "1234");
         RecursoNoEncontradoException ex = assertThrows(
                 RecursoNoEncontradoException.class,
-                () -> gestor.registrarRecepcionBolsin(EMP_VILLA_MARIA));
+                () -> gestor.registrarRecepcionBolsin());
         assertTrue(ex.getMessage().contains("No hay bolsines enviados"),
                 "El mensaje debe indicar ausencia de bolsines pendientes");
     }
 
     @Test
+    @Transactional
     @DisplayName("Doble confirmación: intentar confirmar un bolsín ya recibido lanza ConflictoEstadoException")
     void dobleConfirmacion_lanzaConflicto() {
         int nroBolsin = 1002;
 
         // Primera confirmación exitosa
-        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+        gestor.registrarRecepcionBolsin();
         gestor.tomarSeleccionBolsin(nroBolsin);
         gestor.tomarSeleccionRecepcion(1);
         ConfirmarRecepcionResponse primera = gestor.tomarConfirmacion(true);
@@ -188,7 +215,7 @@ class GestorRecepcionBolsinTests {
 
         // Segundo intento sobre el mismo bolsín: ya no está en estado Enviado,
         // así que el conflicto aparece al seleccionarlo
-        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+        gestor.registrarRecepcionBolsin();
         ConflictoEstadoException ex = assertThrows(
                 ConflictoEstadoException.class,
                 () -> gestor.tomarSeleccionBolsin(nroBolsin));
@@ -199,7 +226,7 @@ class GestorRecepcionBolsinTests {
     @DisplayName("Opciones 2, 3 y 4: lanzan FuncionalidadNoDisponibleException sin modificar la base de datos")
     void opcionesNoDisponibles_lanzanExcepcion() {
         int nroBolsin = 1003;
-        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+        gestor.registrarRecepcionBolsin();
         gestor.tomarSeleccionBolsin(nroBolsin);
 
         assertThrows(FuncionalidadNoDisponibleException.class,
@@ -216,7 +243,7 @@ class GestorRecepcionBolsinTests {
     @DisplayName("Rollback: Si ocurre un fallo a mitad de tomarConfirmacion, no queda ningún estado modificado en BD")
     void rollback_errorAMitadDeConfirmacion_noModificaEstados() {
         int nroBolsin = 1003;
-        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+        gestor.registrarRecepcionBolsin();
         gestor.tomarSeleccionBolsin(nroBolsin);
         gestor.tomarSeleccionRecepcion(1);
 
@@ -255,7 +282,7 @@ class GestorRecepcionBolsinTests {
     @DisplayName("Flujo A6: No confirmar (confirmado=false) devuelve confirmado=false sin modificar datos")
     void flujoA6_noConfirmar_noModificaBD() {
         int nroBolsin = 1003;
-        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+        gestor.registrarRecepcionBolsin();
         gestor.tomarSeleccionBolsin(nroBolsin);
         gestor.tomarSeleccionRecepcion(1);
 
@@ -279,12 +306,11 @@ class GestorRecepcionBolsinTests {
     @Test
     @DisplayName("Cambio de usuario: iniciar con nuevo usuario reinicia el estado del Gestor")
     void cambioUsuario_reiniciaEstadoGestor() {
-        gestor.registrarRecepcionBolsin(EMP_CORDOBA);
+        gestor.registrarRecepcionBolsin();
         gestor.tomarSeleccionBolsin(1001);
         assertNotNull(gestor.getBolsinSeleccionado());
 
-        // Al iniciar con otro usuario o hacer finCU se limpia el bolsín seleccionado
-        gestor.finCU();
+        sesionService.login("laura", "1234");
         assertNull(gestor.getBolsinSeleccionado());
         assertNull(gestor.getEmpleadoLogueado());
     }

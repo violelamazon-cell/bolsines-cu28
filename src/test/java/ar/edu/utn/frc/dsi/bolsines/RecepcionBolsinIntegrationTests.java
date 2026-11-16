@@ -48,17 +48,58 @@ class RecepcionBolsinIntegrationTests {
     @Autowired
     private GestorRecepcionBolsin gestor;
 
+    @Autowired
+    private ar.edu.utn.frc.dsi.bolsines.control.SesionService sesionService;
+
     private static final String EMP_CORDOBA = "1";
     private static final String EMP_VILLA_MARIA = "4";
 
     @BeforeEach
     void setUp() {
+        sesionService.login("carlos", "1234");
         gestor.finCU();
     }
 
     // =========================================================================
-    // Sesión simulada
+    // Sesión y Login/Logout (Paso 2 E1)
     // =========================================================================
+
+    @Test
+    @DisplayName("POST /api/sesion/login -> valida credenciales y crea sesión activa")
+    void login_credencialesValidas_retornaSesion() throws Exception {
+        String body = """
+                {"usuario": "carlos", "password": "1234"}
+                """;
+        mockMvc.perform(post("/api/sesion/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombreCompleto").value(containsString("Carlos")))
+                .andExpect(jsonPath("$.codigoCm").value("CMJ-CBA"));
+    }
+
+    @Test
+    @DisplayName("POST /api/sesion/login -> credenciales inválidas devuelve 400")
+    void login_credencialesInvalidas_devuelve400() throws Exception {
+        String body = """
+                {"usuario": "carlos", "password": "password_erronea"}
+                """;
+        mockMvc.perform(post("/api/sesion/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("Usuario o contraseña incorrectos."));
+    }
+
+    @Test
+    @DisplayName("POST /api/sesion/logout -> cierra sesión activa")
+    void logout_cierraSesionActiva() throws Exception {
+        mockMvc.perform(post("/api/sesion/logout"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/sesion"))
+                .andExpect(status().isNotFound());
+    }
 
     @Test
     @DisplayName("GET /api/sesion -> retorna datos del empleado activo")
@@ -403,8 +444,8 @@ class RecepcionBolsinIntegrationTests {
     @Test
     @DisplayName("POST /api/recepcion-bolsin/iniciar con empleado de Villa María -> 404")
     void iniciar_empleadoVillaMaria_sinBolsines_devuelve404() throws Exception {
-        mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
-                        .header("X-Empleado-Id", EMP_VILLA_MARIA))
+        sesionService.login("laura", "1234");
+        mockMvc.perform(post("/api/recepcion-bolsin/iniciar"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.mensaje").value(containsString("bolsines enviados pendientes")));
     }
@@ -495,12 +536,12 @@ class RecepcionBolsinIntegrationTests {
     }
 
     @Test
-    @DisplayName("POST /api/recepcion-bolsin/iniciar con X-Empleado-Id=abc -> 400 con mensaje")
-    void iniciar_empleadoIdConLetras_devuelve400() throws Exception {
-        mockMvc.perform(post("/api/recepcion-bolsin/iniciar")
-                        .header("X-Empleado-Id", "abc"))
+    @DisplayName("POST /api/recepcion-bolsin/iniciar sin sesión activa -> 400 con mensaje")
+    void iniciar_sinSesionActiva_devuelve400() throws Exception {
+        sesionService.logout();
+        mockMvc.perform(post("/api/recepcion-bolsin/iniciar"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.mensaje").value("El valor ingresado para 'X-Empleado-Id' no es válido."));
+                .andExpect(jsonPath("$.mensaje").value(containsString("No hay una sesión activa")));
     }
 
     @Test

@@ -41,6 +41,7 @@ public class GestorRecepcionBolsin {
     private final EstadoRemitoRepository estadoRemitoRepository;
     private final ComisionMedicaRepository comisionMedicaRepository;
     private final NotificadorEmail notificadorEmail;
+    private final SesionRepository sesionRepository;
 
     // Atributos de estado del caso de uso (exactamente 5 según diagrama de clases
     // E2)
@@ -55,13 +56,15 @@ public class GestorRecepcionBolsin {
             EstadoBolsinRepository estadoBolsinRepository,
             EstadoRemitoRepository estadoRemitoRepository,
             ComisionMedicaRepository comisionMedicaRepository,
-            NotificadorEmail notificadorEmail) {
+            NotificadorEmail notificadorEmail,
+            SesionRepository sesionRepository) {
         this.bolsinRepository = bolsinRepository;
         this.empleadoRepository = empleadoRepository;
         this.estadoBolsinRepository = estadoBolsinRepository;
         this.estadoRemitoRepository = estadoRemitoRepository;
         this.comisionMedicaRepository = comisionMedicaRepository;
         this.notificadorEmail = notificadorEmail;
+        this.sesionRepository = sesionRepository;
 
         // Inicialización de atributos de estado según diagrama
         this.empleadoLogueado = null;
@@ -92,28 +95,29 @@ public class GestorRecepcionBolsin {
     }
 
     // =========================================================================
-    // CU 28 – Paso 1 y 2: Iniciar recepción y obtener usuario logueado
+    // CU 28 – Paso 1 y 2: Iniciar recepción y obtener usuario logueado (E1)
     // =========================================================================
 
     /**
-     * CU 28 Paso 2: Inicia el caso de uso recuperando el empleado logueado y
-     * buscando los bolsines en estado 'Enviado' dirigidos a su Comisión Médica.
+     * CU 28 Paso 1 y 2: Inicia el caso de uso recuperando el empleado logueado desde
+     * la sesión activa y buscando los bolsines en estado 'Enviado' dirigidos a su Comisión Médica.
      */
     @Transactional(readOnly = true)
-    public IniciarRecepcionResponse registrarRecepcionBolsin(Long empleadoId) {
-        this.empleadoLogueado = getUsuarioLogueado(empleadoId);
+    public IniciarRecepcionResponse registrarRecepcionBolsin() {
+        this.empleadoLogueado = getUsuarioLogueado();
         this.bolsinSeleccionado = null;
         this.estadoBolsin = null;
         this.estadoRemito = null;
 
-        buscarBolsinesEnviados();
-
         ComisionMedica cmUsuario = this.empleadoLogueado.getCM();
+        String nombreCM = cmUsuario.getNombre();
+
+        buscarBolsinesEnviados();
 
         if (this.bolsinesEnviados == null || this.bolsinesEnviados.isEmpty()) {
             throw new RecursoNoEncontradoException(
                     "No hay bolsines enviados pendientes de recepción para la comisión médica "
-                            + cmUsuario.getNombre());
+                            + nombreCM);
         }
 
         List<BolsinResumenDto> bolsinesDto = this.bolsinesEnviados.stream()
@@ -124,40 +128,36 @@ public class GestorRecepcionBolsin {
                 .collect(Collectors.toList());
 
         return new IniciarRecepcionResponse(
-                cmUsuario.getNombre(),
+                nombreCM,
                 cmUsuario.getCodigo(),
                 bolsinesDto);
     }
 
-    @Transactional(readOnly = true)
-    public IniciarRecepcionResponse registrarRecepcionBolsin() {
-        Long empId = this.empleadoLogueado != null ? this.empleadoLogueado.getId() : 1L;
-        return registrarRecepcionBolsin(empId);
-    }
-
     /**
-     * CU 28 Paso 2: Recupera el empleado logueado (simulado en cabecera o
-     * parámetro).
+     * CU 28 Paso 2 / Secuencia E1:
+     * Obtiene la Sesión activa -> getUsuarioLogueado() -> recorre los Empleado con esTuUsuario(usuario)
+     * -> el que coincide queda en el atributo de estado empleadoLogueado.
      */
     @Transactional(readOnly = true)
-    public Empleado getUsuarioLogueado(Long empleadoId) {
-        if (empleadoId != null) {
-            Optional<Empleado> empOpt = empleadoRepository.findById(empleadoId);
-            if (empOpt.isPresent()) {
-                return empOpt.get();
+    public Empleado getUsuarioLogueado() {
+        Sesion sesionActiva = sesionRepository.findTopByFechaHoraFinIsNullOrderByFechaHoraInicioDesc()
+                .orElseThrow(() -> new DatoInvalidoException("No hay una sesión activa de usuario."));
+
+        Usuario usuario = sesionActiva.getUsuarioLogueado();
+        if (usuario == null) {
+            throw new DatoInvalidoException("La sesión activa no tiene un usuario asociado.");
+        }
+
+        List<Empleado> empleados = empleadoRepository.findAll();
+        for (Empleado emp : empleados) {
+            if (emp.esTuUsuario(usuario)) {
+                this.empleadoLogueado = emp;
+                return emp;
             }
         }
-        // Si no se encuentra y se solicita id=1 o null, fallback al empleado de CM
-        // Córdoba
-        if (empleadoId == null || empleadoId == 1L) {
-            return empleadoRepository.findAll().stream()
-                    .filter(e -> e.getCM() != null && "CMJ-CBA".equalsIgnoreCase(e.getCM().getCodigo()))
-                    .findFirst()
-                    .orElseThrow(() -> new RecursoNoEncontradoException(
-                            "No se encontró el empleado con id: " + empleadoId));
-        }
+
         throw new RecursoNoEncontradoException(
-                "No se encontró el empleado con id: " + empleadoId);
+                "No se encontró un empleado asociado al usuario logueado: " + usuario.getNombre());
     }
 
     /**
@@ -189,7 +189,7 @@ public class GestorRecepcionBolsin {
     @Transactional(readOnly = true)
     public List<BolsinResumenDto> filtrarBolsines(Integer numeroPrecinto, String cmOrigen) {
         if (this.bolsinesEnviados == null || this.bolsinesEnviados.isEmpty()) {
-            registrarRecepcionBolsin(this.empleadoLogueado != null ? this.empleadoLogueado.getId() : 1L);
+            registrarRecepcionBolsin();
         }
 
         List<Bolsin> filtrados = this.bolsinesEnviados;
@@ -235,7 +235,7 @@ public class GestorRecepcionBolsin {
     @Transactional(readOnly = true)
     public SeleccionarBolsinResponse tomarSeleccionBolsin(int numeroBolsin) {
         if (this.empleadoLogueado == null) {
-            this.empleadoLogueado = getUsuarioLogueado(1L);
+            this.empleadoLogueado = getUsuarioLogueado();
         }
 
         Bolsin bolsin = cargarBolsinConRelaciones(numeroBolsin);
@@ -508,30 +508,6 @@ public class GestorRecepcionBolsin {
         finCU();
     }
 
-    // =========================================================================
-    // Sesión simulada
-    // =========================================================================
-
-    @Transactional(readOnly = true)
-    public SesionDto getSesion(Long empleadoId) {
-        Empleado emp = getUsuarioLogueado(empleadoId);
-        return new SesionDto(
-                emp.getId(),
-                emp.getNombre() + " " + emp.getApellido(),
-                emp.getCM().getNombre(),
-                emp.getCM().getCodigo());
-    }
-
-    @Transactional(readOnly = true)
-    public List<SesionDto> listarEmpleados() {
-        return empleadoRepository.findAll().stream()
-                .map(emp -> new SesionDto(
-                        emp.getId(),
-                        emp.getNombre() + " " + emp.getApellido(),
-                        emp.getCM().getNombre(),
-                        emp.getCM().getCodigo()))
-                .collect(Collectors.toList());
-    }
 
     @Transactional(readOnly = true)
     public List<ComisionMedicaDto> listarComisionesMedicas() {

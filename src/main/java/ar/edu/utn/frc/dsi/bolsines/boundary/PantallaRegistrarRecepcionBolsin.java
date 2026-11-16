@@ -31,12 +31,10 @@ public class PantallaRegistrarRecepcionBolsin {
      * Corresponde a opcRegistrarRecepcionBolsin() + habilitarPantalla() del diagrama.
      *
      * POST /api/recepcion-bolsin/iniciar
-     * Header: X-Empleado-Id: {id}
      */
     @PostMapping("/iniciar")
-    public ResponseEntity<IniciarRecepcionResponse> opcRegistrarRecepcionBolsin(
-            @RequestHeader(value = "X-Empleado-Id", defaultValue = "1") Long empleadoId) {
-        IniciarRecepcionResponse respuesta = gestor.registrarRecepcionBolsin(empleadoId);
+    public ResponseEntity<IniciarRecepcionResponse> opcRegistrarRecepcionBolsin() {
+        IniciarRecepcionResponse respuesta = gestor.registrarRecepcionBolsin();
         return ResponseEntity.ok(respuesta);
     }
 

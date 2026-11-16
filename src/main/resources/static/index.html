@@ -32,32 +32,37 @@
 
       <main class="login-card" aria-labelledby="login-titulo">
         <h1 id="login-titulo" class="login-titulo">Iniciá sesión</h1>
-        <p class="login-subtitulo">Elegí tu usuario para continuar</p>
+        <p class="login-subtitulo">Ingresá tus credenciales para continuar</p>
 
-        <!-- Estado cargando -->
-        <div id="login-cargando" class="loading-container" aria-live="polite" aria-busy="true" hidden>
-          <span class="spinner" aria-hidden="true"></span>
-          <span>Cargando usuarios…</span>
-        </div>
-
-        <!-- Error de carga -->
+        <!-- Error de login -->
         <div id="login-error" class="banner banner-danger" role="alert" hidden>
           <span class="banner-icon" aria-hidden="true">✖</span>
-          <span id="login-error-msg">No se pudieron cargar los usuarios. Recargá la página.</span>
+          <span id="login-error-msg">Usuario o contraseña incorrectos.</span>
         </div>
 
-        <!-- Grilla de tarjetas (notebook) / lista (móvil) -->
-        <div id="login-grid" class="login-grid" role="list" aria-label="Usuarios disponibles">
-          <!-- Tarjetas generadas por JS -->
-        </div>
+        <!-- Formulario de inicio de sesión -->
+        <form id="form-login" class="login-form">
+          <div style="margin-bottom: 1rem; text-align: left;">
+            <label for="login-usuario" style="font-weight: 600; display: block; margin-bottom: 0.25rem;">Usuario</label>
+            <input type="text" id="login-usuario" name="usuario" placeholder="Ej: carlos" required autocomplete="username">
+          </div>
+          <div style="margin-bottom: 1.25rem; text-align: left;">
+            <label for="login-password" style="font-weight: 600; display: block; margin-bottom: 0.25rem;">Contraseña</label>
+            <input type="password" id="login-password" name="password" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+          <button type="submit" id="btn-login-submit" class="btn btn-primary" style="width: 100%;">
+            <span id="login-btn-spinner" class="spinner" aria-hidden="true" hidden></span>
+            <span id="login-btn-text">Ingresar</span>
+          </button>
+        </form>
 
-        <div class="login-aviso" role="note">
+        <div class="login-aviso" role="note" style="margin-top: 1.5rem;">
           <svg class="login-aviso-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <circle cx="10" cy="10" r="9" stroke="#8A5A00" stroke-width="1.5"/>
             <path d="M10 6v4" stroke="#8A5A00" stroke-width="1.5" stroke-linecap="round"/>
             <circle cx="10" cy="13.5" r="0.75" fill="#8A5A00"/>
           </svg>
-          <span>Inicio de sesión simulado para la demostración. No requiere contraseña.</span>
+          <span>Usuarios disponibles: <strong>carlos</strong>, <strong>ana</strong>, <strong>roberto</strong>, <strong>laura</strong>, <strong>martin</strong> (clave: <strong>1234</strong>)</span>
         </div>
       </main>
     </div>

@@ -223,4 +223,40 @@ class DominioPuroTests {
         Bolsin bolsinOrigenSinNombre = new Bolsin(1003, 50003, LocalDateTime.now(), 1000.0, cmSinNombre, null);
         assertEquals("", bolsinOrigenSinNombre.buscarCMOrigen());
     }
+
+    @Test
+    @DisplayName("Paso 2 E1: Usuario y Sesion - getUsuarioLogueado y esActiva")
+    void testUsuarioYSesion() {
+        Usuario usuario = new Usuario("carlos", "1234");
+        assertEquals("carlos", usuario.getNombre());
+        assertEquals("1234", usuario.getPassword());
+
+        LocalDateTime inicio = LocalDateTime.now();
+        Sesion sesion = new Sesion(inicio, usuario);
+        assertEquals(inicio, sesion.getFechaHoraInicio());
+        assertNull(sesion.getFechaHoraFin());
+        assertTrue(sesion.esActiva());
+        assertEquals(usuario, sesion.getUsuarioLogueado());
+
+        LocalDateTime fin = inicio.plusHours(1);
+        sesion.setFechaHoraFin(fin);
+        assertEquals(fin, sesion.getFechaHoraFin());
+        assertFalse(sesion.esActiva());
+    }
+
+    @Test
+    @DisplayName("Paso 2 E1: Empleado.esTuUsuario(Usuario) evalúa correctamente")
+    void testEmpleadoEsTuUsuario() {
+        Usuario u1 = new Usuario("carlos", "1234");
+        Usuario u2 = new Usuario("ana", "1234");
+
+        Empleado emp = new Empleado("Carlos", "Gómez", "carlos@test.com", null, u1);
+
+        assertTrue(emp.esTuUsuario(u1));
+        assertFalse(emp.esTuUsuario(u2));
+        assertFalse(emp.esTuUsuario(null));
+
+        Empleado empSinUsuario = new Empleado("Sin", "User", "sin@test.com", null);
+        assertFalse(empSinUsuario.esTuUsuario(u1));
+    }
 }

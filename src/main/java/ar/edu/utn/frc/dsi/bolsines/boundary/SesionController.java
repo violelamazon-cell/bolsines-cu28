@@ -1,57 +1,84 @@
 package ar.edu.utn.frc.dsi.bolsines.boundary;
 
 import ar.edu.utn.frc.dsi.bolsines.boundary.dto.CambiarSesionRequest;
+import ar.edu.utn.frc.dsi.bolsines.boundary.dto.LoginRequest;
 import ar.edu.utn.frc.dsi.bolsines.boundary.dto.SesionDto;
-import ar.edu.utn.frc.dsi.bolsines.control.GestorRecepcionBolsin;
+import ar.edu.utn.frc.dsi.bolsines.control.SesionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 /**
- * SesionController – Boundary para gestión de sesión simulada.
+ * SesionController – Boundary para inicio y fin de sesión (login/logout).
  *
- * Facilita el selector de 'Usuario activo' en el frontend para probar
- * los distintos roles y estados vacíos sin requerir autenticación real.
+ * Delega exclusivamente a SesionService, no al GestorRecepcionBolsin.
  */
 @RestController
 @RequestMapping("/api/sesion")
 public class SesionController {
 
-    private final GestorRecepcionBolsin gestor;
+    private final SesionService sesionService;
 
-    public SesionController(GestorRecepcionBolsin gestor) {
-        this.gestor = gestor;
+    public SesionController(SesionService sesionService) {
+        this.sesionService = sesionService;
     }
 
     /**
-     * GET /api/sesion?empleadoId={id}
-     * Obtiene los datos del empleado activo (por defecto id=1, Carlos Gómez).
+     * POST /api/sesion/login
+     * Valida usuario y contraseña y crea una sesión activa.
+     */
+    @PostMapping("/login")
+    public ResponseEntity<SesionDto> login(@RequestBody LoginRequest request) {
+        SesionDto sesion = sesionService.login(request.usuario(), request.password());
+        return ResponseEntity.ok(sesion);
+    }
+
+    /**
+     * POST /api/sesion/logout
+     * Cierra la sesión activa seteando fechaHoraFin.
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        sesionService.logout();
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * GET /api/sesion
+     * Obtiene los datos de la sesión activa actual.
      */
     @GetMapping
-    public ResponseEntity<SesionDto> getSesion(@RequestParam(defaultValue = "1") Long empleadoId) {
-        SesionDto sesion = gestor.getSesion(empleadoId);
+    public ResponseEntity<SesionDto> getSesion(@RequestParam(required = false) Long empleadoId) {
+        SesionDto sesion;
+        try {
+            sesion = sesionService.getSesionActiva();
+        } catch (Exception ex) {
+            if (empleadoId != null) {
+                sesion = sesionService.iniciarSesionPorEmpleado(empleadoId);
+            } else {
+                throw ex;
+            }
+        }
         return ResponseEntity.ok(sesion);
     }
 
     /**
      * GET /api/sesion/empleados
-     * Retorna el listado completo de empleados para el selector del frontend.
+     * Retorna el listado de empleados disponibles.
      */
     @GetMapping("/empleados")
     public ResponseEntity<List<SesionDto>> listarEmpleados() {
-        return ResponseEntity.ok(gestor.listarEmpleados());
+        return ResponseEntity.ok(sesionService.listarEmpleados());
     }
 
     /**
      * POST /api/sesion/iniciar
-     * Cambia el empleado activo en el frontend simulado.
+     * Cambia la sesión activa por id de empleado (compatibilidad).
      */
     @PostMapping("/iniciar")
     public ResponseEntity<SesionDto> iniciarSesion(@RequestBody CambiarSesionRequest request) {
-        gestor.finCU();
-        SesionDto sesion = gestor.getSesion(request.empleadoId());
+        SesionDto sesion = sesionService.iniciarSesionPorEmpleado(request.empleadoId());
         return ResponseEntity.ok(sesion);
     }
 }
-
